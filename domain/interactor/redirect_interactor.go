@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/lroman242/redirector/domain/dto"
@@ -20,6 +22,11 @@ var (
 	InvalidRedirectTypeError  = errors.New("invalid redirect type is stored in tracking link redirect rules")
 	BlockRedirectError        = errors.New("redirect should be blocked")
 	TrackingLinkDisabledError = errors.New("used tracking link is disabled")
+	TrackingLinkNotFoundError = errors.New("no tracking link was found by slug")
+)
+
+const (
+	IPAddressToken = "{ip}"
 )
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
@@ -31,19 +38,28 @@ type redirectInteractor struct {
 	trackingLinksRepo repository.TrackingLinksRepositoryInterface
 	ipAddressParser   service.IpAddressParserInterface
 	userAgentParser   service.UserAgentParser
+	tokenRegExp       *regexp.Regexp
 }
 
 func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, ipAddressParser service.IpAddressParserInterface, userAgentParser service.UserAgentParser) RedirectInteractor {
+	compiledRegExp, err := regexp.Compile(`{({)?(\w+)(})?}`)
+	if err != nil {
+		panic(err)
+	}
+
 	return &redirectInteractor{
 		trackingLinksRepo: trkRepo,
 		ipAddressParser:   ipAddressParser,
 		userAgentParser:   userAgentParser,
+		tokenRegExp:       compiledRegExp,
 	}
 }
 
 func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (string, error) {
 	trackingLink := r.trackingLinksRepo.FindTrackingLink(slug)
-	//TODO: handle tracking link not found case
+	if trackingLink == nil {
+		return "", TrackingLinkNotFoundError
+	}
 
 	if !trackingLink.IsActive {
 		return "", TrackingLinkDisabledError
@@ -102,9 +118,17 @@ func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, 
 }
 
 func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) string {
-	//TODO: render tokens for target URL
+	targetURL := trackingLink.TargetURLTemplate
 
-	return trackingLink.TargetURLTemplate
+	tokens := r.tokenRegExp.FindAllString(targetURL, -1)
+	for _, token := range tokens {
+		switch token {
+		case IPAddressToken:
+			targetURL = strings.Replace(targetURL, token, requestData.IP.String(), 1)
+		}
+	}
+
+	return targetURL
 }
 
 // contains checks if a string is present in a slice.
