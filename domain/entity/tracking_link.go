@@ -19,4 +19,11 @@ type TrackingLink struct {
 	CampaignDisabledRedirectRules *valueobject.RedirectRules
 
 	TargetURLTemplate string
+
+	//AllowDeeplink bool
+	//
+	CampaignID   string
+	AffiliateID  string
+	AdvertiserID string
+	SourceID     string
 }

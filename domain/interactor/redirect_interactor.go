@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,7 +27,26 @@ var (
 )
 
 const (
-	IPAddressToken = "{ip}"
+	IPAddressToken    = "{ip}"
+	ClickIDToken      = "{click_id}"
+	UserAgentToken    = "{user_agent}"
+	CampaignIDToken   = "{campaign_id}"
+	AffiliateIDToken  = "{aff_id}"
+	SourceIDToken     = "{source_id}"
+	AdvertiserIDToken = "{advertiser_id}"
+	DateToken         = "{date}"
+	DateTimeToken     = "{date_time}"
+	TimestampToken    = "{timestamp}"
+	P1Token           = "{p1}"
+	P2Token           = "{p2}"
+	P3Token           = "{p3}"
+	P4Token           = "{p4}"
+	CountryCodeToken  = "{country_code}"
+	RefererToken      = "{referer}"
+	RandomStrToken    = "{random_str}"
+	RandomIntToken    = "{random_int}"
+	DeviceToken       = "{device}"
+	PlatformToken     = "{platform}"
 )
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
@@ -93,6 +113,10 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		return r.handleRedirectRules(trackingLink.CampaignDisabledRedirectRules, ctx, requestData)
 	}
 
+	//if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
+	//	//TODO: handle deeplink
+	//}
+
 	targetURL := r.renderTokens(trackingLink, requestData, ua, countryCode)
 
 	//TODO: implement pipe: service -> click registration -> [kafka producer, clickhouse insert]
@@ -124,7 +148,54 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	for _, token := range tokens {
 		switch token {
 		case IPAddressToken:
-			targetURL = strings.Replace(targetURL, token, requestData.IP.String(), 1)
+			targetURL = strings.Replace(targetURL, token, requestData.IP.String(), -1)
+		case ClickIDToken:
+			targetURL = strings.Replace(targetURL, token, requestData.RequestID, -1)
+		case UserAgentToken:
+			targetURL = strings.Replace(targetURL, token, requestData.UserAgent, -1)
+		case CampaignIDToken:
+			targetURL = strings.Replace(targetURL, token, trackingLink.CampaignID, -1)
+		case AffiliateIDToken:
+			targetURL = strings.Replace(targetURL, token, trackingLink.AffiliateID, -1)
+		case SourceIDToken:
+			targetURL = strings.Replace(targetURL, token, trackingLink.SourceID, -1)
+		case AdvertiserIDToken:
+			targetURL = strings.Replace(targetURL, token, trackingLink.AdvertiserID, -1)
+		case DateToken:
+			targetURL = strings.Replace(targetURL, token, time.Now().Format("2006-02-01"), 1)
+		case DateTimeToken:
+			targetURL = strings.Replace(targetURL, token, time.Now().Format("2006-01-02T15:04:05"), 1)
+		case TimestampToken:
+			targetURL = strings.Replace(targetURL, token, strconv.FormatInt(time.Now().Unix(), 10), 1)
+		case P1Token:
+			values := requestData.GetParam("p1")
+			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+		case P2Token:
+			values := requestData.GetParam("p2")
+			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+		case P3Token:
+			values := requestData.GetParam("p3")
+			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+		case P4Token:
+			values := requestData.GetParam("p4")
+			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+		case CountryCodeToken:
+			targetURL = strings.Replace(targetURL, token, countryCode, -1)
+		case RefererToken:
+			targetURL = strings.Replace(targetURL, token, requestData.Referer, -1)
+		case RandomStrToken:
+			targetURL = strings.Replace(targetURL, token, randString(32), 1)
+		case RandomIntToken:
+			targetURL = strings.Replace(targetURL, token, strconv.Itoa(rand.Intn(99999999-10000)+10000), 1)
+		case DeviceToken:
+			targetURL = strings.Replace(targetURL, token, ua.Device, -1)
+		case PlatformToken:
+			targetURL = strings.Replace(targetURL, token, ua.Platform, -1)
+		//TODO: add new tokens
+
+		//replace undefined tokens with empty string
+		default:
+			targetURL = strings.Replace(targetURL, token, "", -1)
 		}
 	}
 
@@ -140,4 +211,16 @@ func contains(needle string, haystack []string) bool {
 	}
 
 	return false
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// randString function generates random string of n-length
+func randString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+
+	return string(b)
 }

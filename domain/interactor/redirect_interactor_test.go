@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
 	"github.com/lroman242/redirector/domain/valueobject"
 	"github.com/lroman242/redirector/mocks"
-	"net"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
@@ -626,11 +628,13 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
-		Params:    make(map[string][]string),
+		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
 		Headers:   make(map[string]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
+		Referer:   "https://httpbin.org",
+		RequestID: "someUniqueRequestID",
 	}
 	expectedSlug := "testSlug123"
 	expectedTrkLink := entity.TrackingLink{
@@ -642,6 +646,7 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		IsCampaignOveraged: false,
 		IsCampaignActive:   true,
 		TargetURLTemplate:  "http://target.url/path",
+		CampaignID:         "1234",
 	}
 	expectedCountry := "PL"
 	expectedUserAgent := &valueobject.UserAgent{
@@ -665,10 +670,118 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 			expectedTargetURL: expectedTrkLink.TargetURLTemplate,
 		},
 		{
-			name:              "RenderTokens_IP",
+			name:              "RenderTokens_IPAddressToken",
 			trkLink:           expectedTrkLink,
 			tokens:            []string{"{ip}"},
 			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.IP),
+		},
+		{
+			name:              "RenderTokens_ClickIDToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{click_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.RequestID),
+		},
+		{
+			name:              "RenderTokens_UserAgentToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{user_agent}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.UserAgent),
+		},
+		{
+			name:              "RenderTokens_CampaignIDToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{campaign_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.CampaignID),
+		},
+		{
+			name:              "RenderTokens_AffiliateIDToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{aff_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.AffiliateID),
+		},
+		{
+			name:              "RenderTokens_SourceIDToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{source_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.SourceID),
+		},
+		{
+			name:              "RenderTokens_AdvertiserIDToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{advertiser_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.AdvertiserID),
+		},
+		{
+			name:              "RenderTokens_DateToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{date}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-02-01")),
+		},
+		{
+			name:              "RenderTokens_DateTimeToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{date_time}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-01-02T15:04:05")),
+		},
+		{
+			name:              "RenderTokens_TimestampToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{timestamp}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, strconv.FormatInt(time.Now().Unix(), 10)),
+		},
+		{
+			name:    "RenderTokens_P1-P4Tokens",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{p1}", "{p2}", "{p3}", "{p4}"},
+			expectedTargetURL: fmt.Sprintf(
+				"%s?key0=%s&key1=%s&key2=%s&key3=%s",
+				expectedTrkLink.TargetURLTemplate,
+				strings.Join(expectedDto.GetParam("p1"), ","),
+				strings.Join(expectedDto.GetParam("p2"), ","),
+				strings.Join(expectedDto.GetParam("p3"), ","),
+				strings.Join(expectedDto.GetParam("p4"), ",")),
+		},
+		{
+			name:              "RenderTokens_CountryCodeToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{country_code}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedCountry),
+		},
+		{
+			name:              "RenderTokens_RefererToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{referer}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.Referer),
+		},
+		//{
+		//	name:              "RenderTokens_RandomStrToken",
+		//	trkLink:           expectedTrkLink,
+		//	tokens:            []string{"{random_str}"},
+		//	expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, ""), //TODO:
+		//},
+		//{
+		//	name:              "RenderTokens_RandomIntToken",
+		//	trkLink:           expectedTrkLink,
+		//	tokens:            []string{"{random_int}"},
+		//	expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, "1"), //TODO:
+		//},
+		{
+			name:              "RenderTokens_DeviceToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{device}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedUserAgent.Device),
+		},
+		{
+			name:              "RenderTokens_PlatformToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{platform}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedUserAgent.Platform),
+		},
+		{
+			name:              "RenderTokens_UnknownToken",
+			trkLink:           expectedTrkLink,
+			tokens:            []string{"{unknown}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, ""),
 		},
 		//TODO: test other tokens
 	}
@@ -676,7 +789,6 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			if len(tc.tokens) > 0 {
 				if !strings.HasSuffix(tc.trkLink.TargetURLTemplate, "?") {
 					tc.trkLink.TargetURLTemplate += "?"
