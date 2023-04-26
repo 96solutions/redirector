@@ -30,19 +30,21 @@ func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	}
 	expectedSlug := "testSlug123"
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	repo.EXPECT().FindTrackingLink(expectedSlug).Return(nil)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(nil)
+
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
-	targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
 	if !errors.Is(err, TrackingLinkNotFoundError) {
 		t.Error("unexpected result, TrackingLinkNotFoundError expected")
 	}
-	if targetURL != "" {
+	if rResult != nil {
 		t.Error("unexpected target url. expected empty value")
 	}
 }
@@ -51,11 +53,12 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -72,13 +75,13 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 		AllowedProtocols: []string{"https"},
 	}
 
-	repo.EXPECT().FindTrackingLink(expectedSlug).Return(trkLink)
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
-	targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if !errors.Is(err, TrackingLinkDisabledError) {
 		t.Error("unexpected result, TrackingLinkDisabledError expected")
 	}
-	if targetURL != "" {
+	if rResult != nil {
 		t.Error("unexpected target url. expected empty value")
 	}
 }
@@ -87,11 +90,12 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -108,13 +112,13 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 		AllowedProtocols: []string{"https"},
 	}
 
-	repo.EXPECT().FindTrackingLink(expectedSlug).Return(trkLink)
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
-	targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if !errors.Is(err, UnsupportedProtocolError) {
 		t.Error("unexpected result, UnsupportedProtocolError expected")
 	}
-	if targetURL != "" {
+	if rResult != nil {
 		t.Error("unexpected target url. expected empty value")
 	}
 }
@@ -123,11 +127,12 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -145,14 +150,14 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 		AllowedGeos:      []string{"US", "PT", "UA"},
 	}
 
-	repo.EXPECT().FindTrackingLink(expectedSlug).Return(trkLink)
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 
-	targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if !errors.Is(err, UnsupportedGeoError) {
 		t.Error("unexpected result, UnsupportedGeoError expected")
 	}
-	if targetURL != "" {
+	if rResult != nil {
 		t.Error("unexpected target url. expected empty value")
 	}
 }
@@ -161,11 +166,12 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -184,7 +190,7 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 		AllowedDevices:   []string{"Desktop"},
 	}
 
-	repo.EXPECT().FindTrackingLink(expectedSlug).Return(trkLink)
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 	userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
 		Bot:      false,
@@ -194,11 +200,11 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 		Version:  "109.0.5414.119",
 	}, nil)
 
-	targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if !errors.Is(err, UnsupportedDeviceError) {
 		t.Error("unexpected result, UnsupportedDeviceError expected")
 	}
-	if targetURL != "" {
+	if rResult != nil {
 		t.Error("unexpected target url. expected empty value")
 	}
 }
@@ -207,13 +213,15 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
+		RequestID: "someUniqueRequestID",
 		Params:    make(map[string][]string),
 		Headers:   make(map[string]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
@@ -243,12 +251,12 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.LinkRedirectType,
-					RedirectURL:       "http://sometarget.url/test",
+					RedirectURL:       expectedTargetURL,
 					RedirectSlug:      "",
 					RedirectSmartSlug: nil,
 				},
 			},
-			expectedTargetURL: "http://sometarget.url/test",
+			expectedTargetURL: expectedTargetURL,
 			expectedError:     nil,
 		},
 		{
@@ -331,7 +339,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo.EXPECT().FindTrackingLink(expectedSlug).Return(tc.trkLink)
+			trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(tc.trkLink)
 			ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 			userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
 				Bot:      false,
@@ -341,9 +349,25 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				Version:  "109.0.5414.119",
 			}, nil)
 
+			if tc.expectedError == nil {
+				clkRepo.EXPECT().
+					Save(gomock.Any(), gomock.Any()).
+					//Return(nil)
+					DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+						if click.ID != expectedDto.RequestID {
+							t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
+						}
+						if click.TargetURL != tc.expectedTargetURL {
+							t.Errorf("unexpected target URL. expected %s but got %s", tc.expectedTargetURL, click.TargetURL)
+						}
+
+						return nil
+					})
+			}
+
 			if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType ||
 				tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-				repo.EXPECT().FindTrackingLink(gomock.Any()).DoAndReturn(func(arg interface{}) *entity.TrackingLink {
+				trkRepo.EXPECT().FindTrackingLink(context.Background(), gomock.Any()).DoAndReturn(func(ctx context.Context, arg interface{}) *entity.TrackingLink {
 					if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType {
 						slug, ok := arg.(string)
 						if !ok {
@@ -392,18 +416,19 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				}, nil)
 			}
 
-			targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+			rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 			if tc.expectedError != nil {
 				if !errors.Is(err, tc.expectedError) {
 					t.Errorf("unexpected result, %T expected", tc.expectedError)
 				}
-				if targetURL != "" {
+				if rResult != nil {
 					t.Error("unexpected target url. expected empty value")
 				}
-			} else if tc.expectedTargetURL != targetURL {
-				t.Errorf("unexpected target url. expected %s but got %s", tc.expectedTargetURL, targetURL)
+			} else if tc.expectedTargetURL != rResult.TargetURL {
+				t.Errorf("unexpected target url. expected %s but got %s", tc.expectedTargetURL, rResult.TargetURL)
+			} else {
+				<-rResult.OutputCh
 			}
-
 		})
 	}
 
@@ -413,11 +438,12 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -450,12 +476,12 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.LinkRedirectType,
-					RedirectURL:       "http://sometarget.url/test",
+					RedirectURL:       expectedTargetURL,
 					RedirectSlug:      "",
 					RedirectSmartSlug: nil,
 				},
 			},
-			expectedTargetURL: "http://sometarget.url/test",
+			expectedTargetURL: expectedTargetURL,
 			expectedError:     nil,
 		},
 		{
@@ -542,7 +568,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repo.EXPECT().FindTrackingLink(expectedSlug).Return(tc.trkLink)
+			trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(tc.trkLink)
 			ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 			userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
 				Bot:      false,
@@ -552,9 +578,24 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				Version:  "109.0.5414.119",
 			}, nil)
 
+			if tc.expectedError == nil {
+				clkRepo.EXPECT().
+					Save(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+						if click.ID != expectedDto.RequestID {
+							t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
+						}
+						if click.TargetURL != tc.expectedTargetURL {
+							t.Errorf("unexpected target URL. expected %s but got %s", tc.expectedTargetURL, click.TargetURL)
+						}
+
+						return nil
+					})
+			}
+
 			if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType ||
 				tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-				repo.EXPECT().FindTrackingLink(gomock.Any()).DoAndReturn(func(arg interface{}) *entity.TrackingLink {
+				trkRepo.EXPECT().FindTrackingLink(context.Background(), gomock.Any()).DoAndReturn(func(ctx, arg interface{}) *entity.TrackingLink {
 					if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType {
 						slug, ok := arg.(string)
 						if !ok {
@@ -603,16 +644,18 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				}, nil)
 			}
 
-			targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+			rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 			if tc.expectedError != nil {
 				if !errors.Is(err, tc.expectedError) {
 					t.Errorf("unexpected result, %T expected", tc.expectedError)
 				}
-				if targetURL != "" {
+				if rResult != nil {
 					t.Error("unexpected target url. expected empty value")
 				}
-			} else if tc.expectedTargetURL != targetURL {
-				t.Errorf("unexpected target url. expected %s but got %s", tc.expectedTargetURL, targetURL)
+			} else if tc.expectedTargetURL != rResult.TargetURL {
+				t.Errorf("unexpected target url. expected %s but got %s", tc.expectedTargetURL, rResult.TargetURL)
+			} else {
+				<-rResult.OutputCh
 			}
 
 		})
@@ -623,9 +666,10 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	repo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
@@ -785,7 +829,7 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		},
 		//TODO: test other tokens
 	}
-	srv := NewRedirectInteractor(repo, ipAddressParser, userAgentParser)
+	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -802,18 +846,33 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 				}
 			}
 
-			repo.EXPECT().FindTrackingLink(expectedSlug).Return(&tc.trkLink)
+			trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(&tc.trkLink)
 			ipAddressParser.EXPECT().Parse(expectedDto.IP).Return(expectedCountry, nil)
 			userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(expectedUserAgent, nil)
+			clkRepo.EXPECT().
+				Save(gomock.Any(), gomock.Any()).
+				//Return(nil)
+				DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+					if click.ID != expectedDto.RequestID {
+						t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
+					}
+					if click.TargetURL != tc.expectedTargetURL {
+						t.Errorf("unexpected target URL. expected %s but got %s", tc.expectedTargetURL, click.TargetURL)
+					}
 
-			targetURL, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+					return nil
+				})
+
+			rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
-			if targetURL != tc.expectedTargetURL {
-				t.Errorf("unexpected target URL. expected %s but got %s", tc.expectedTargetURL, targetURL)
+			if rResult.TargetURL != tc.expectedTargetURL {
+				t.Errorf("unexpected target URL. expected %s but got %s", tc.expectedTargetURL, rResult.TargetURL)
 			}
+
+			<-rResult.OutputCh
 		})
 	}
 }

@@ -49,44 +49,56 @@ const (
 	PlatformToken     = "{platform}"
 )
 
+type redirectResult struct {
+	TargetURL string
+	OutputCh  <-chan *clickProcessingResult
+}
+
+type clickProcessingResult struct {
+	Click *entity.Click
+	Err   error
+}
+
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
 type RedirectInteractor interface {
-	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (string, error)
+	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error)
 }
 
 type redirectInteractor struct {
-	trackingLinksRepo repository.TrackingLinksRepositoryInterface
-	ipAddressParser   service.IpAddressParserInterface
-	userAgentParser   service.UserAgentParser
-	tokenRegExp       *regexp.Regexp
+	trackingLinksRepository repository.TrackingLinksRepositoryInterface
+	clicksRepository        repository.ClicksRepository
+	ipAddressParser         service.IpAddressParserInterface
+	userAgentParser         service.UserAgentParser
+	tokenRegExp             *regexp.Regexp
 }
 
-func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, ipAddressParser service.IpAddressParserInterface, userAgentParser service.UserAgentParser) RedirectInteractor {
+func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, clkRepo repository.ClicksRepository, ipAddressParser service.IpAddressParserInterface, userAgentParser service.UserAgentParser) RedirectInteractor {
 	compiledRegExp, err := regexp.Compile(`{({)?(\w+)(})?}`)
 	if err != nil {
 		panic(err)
 	}
 
 	return &redirectInteractor{
-		trackingLinksRepo: trkRepo,
-		ipAddressParser:   ipAddressParser,
-		userAgentParser:   userAgentParser,
-		tokenRegExp:       compiledRegExp,
+		trackingLinksRepository: trkRepo,
+		clicksRepository:        clkRepo,
+		ipAddressParser:         ipAddressParser,
+		userAgentParser:         userAgentParser,
+		tokenRegExp:             compiledRegExp,
 	}
 }
 
-func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (string, error) {
-	trackingLink := r.trackingLinksRepo.FindTrackingLink(slug)
+func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error) {
+	trackingLink := r.trackingLinksRepository.FindTrackingLink(ctx, slug)
 	if trackingLink == nil {
-		return "", TrackingLinkNotFoundError
+		return nil, TrackingLinkNotFoundError
 	}
 
 	if !trackingLink.IsActive {
-		return "", TrackingLinkDisabledError
+		return nil, TrackingLinkDisabledError
 	}
 
 	if len(trackingLink.AllowedProtocols) > 0 && !contains(requestData.Protocol, trackingLink.AllowedProtocols) {
-		return "", UnsupportedProtocolError
+		return nil, UnsupportedProtocolError
 	}
 
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
@@ -94,7 +106,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		//TODO: log error
 	}
 	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
-		return "", UnsupportedGeoError
+		return nil, UnsupportedGeoError
 	}
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
@@ -102,15 +114,15 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		//TODO: log error
 	}
 	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
-		return "", UnsupportedDeviceError
+		return nil, UnsupportedDeviceError
 	}
 
 	if trackingLink.IsCampaignOveraged {
-		return r.handleRedirectRules(trackingLink.CampaignOverageRedirectRules, ctx, requestData)
+		return r.handleRedirectRules(trackingLink.CampaignOverageRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
 	}
 
 	if !trackingLink.IsCampaignActive {
-		return r.handleRedirectRules(trackingLink.CampaignDisabledRedirectRules, ctx, requestData)
+		return r.handleRedirectRules(trackingLink.CampaignDisabledRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
 	}
 
 	//if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
@@ -119,15 +131,21 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	targetURL := r.renderTokens(trackingLink, requestData, ua, countryCode)
 
-	//TODO: implement pipe: service -> click registration -> [kafka producer, clickhouse insert]
+	outputCh := r.registerClick(ctx, targetURL, trackingLink, requestData, ua, countryCode)
 
-	return targetURL, nil
+	return &redirectResult{
+		TargetURL: targetURL,
+		OutputCh:  outputCh,
+	}, nil
 }
 
-func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, ctx context.Context, requestData *dto.RedirectRequestData) (string, error) {
+func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, ctx context.Context, requestData *dto.RedirectRequestData, trackingLink *entity.TrackingLink, userAgent *valueobject.UserAgent, countryCode string) (*redirectResult, error) {
 	switch rr.RedirectType {
 	case valueobject.LinkRedirectType:
-		return rr.RedirectURL, nil
+		return &redirectResult{
+			TargetURL: rr.RedirectURL,
+			OutputCh:  r.registerClick(ctx, rr.RedirectURL, trackingLink, requestData, userAgent, countryCode),
+		}, nil
 	case valueobject.SlugRedirectType:
 		return r.Redirect(ctx, rr.RedirectSlug, requestData)
 	case valueobject.SmartSlugRedirectType:
@@ -135,9 +153,9 @@ func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, 
 		newSlug := rr.RedirectSmartSlug[rnd.Intn(len(rr.RedirectSmartSlug))]
 		return r.Redirect(ctx, newSlug, requestData)
 	case valueobject.NoRedirectType:
-		return "", BlockRedirectError
+		return nil, BlockRedirectError
 	default:
-		return "", InvalidRedirectTypeError
+		return nil, InvalidRedirectTypeError
 	}
 }
 
@@ -200,6 +218,35 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	}
 
 	return targetURL
+}
+
+func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *clickProcessingResult {
+	click := &entity.Click{
+		ID:          requestData.RequestID,
+		TargetURL:   targetURL,
+		TRKLink:     trackingLink,
+		UserAgent:   ua,
+		CountryCode: countryCode,
+		IP:          requestData.IP,
+		Referer:     requestData.Referer,
+
+		P1: strings.Join(requestData.GetParam("p1"), ","),
+		P2: strings.Join(requestData.GetParam("p2"), ","),
+		P3: strings.Join(requestData.GetParam("p3"), ","),
+		P4: strings.Join(requestData.GetParam("p4"), ","),
+	}
+
+	output := make(chan *clickProcessingResult)
+	go func(ctx context.Context, click *entity.Click) {
+		defer close(output)
+		err := r.clicksRepository.Save(ctx, click)
+		output <- &clickProcessingResult{
+			Click: click,
+			Err:   err,
+		}
+	}(ctx, click)
+
+	return output
 }
 
 // contains checks if a string is present in a slice.
