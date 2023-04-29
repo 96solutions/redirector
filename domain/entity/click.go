@@ -5,6 +5,7 @@ import (
 	"net"
 )
 
+// Click type describes scope of data retrieved during redirect request via tracking link.
 type Click struct {
 	ID          string
 	TargetURL   string

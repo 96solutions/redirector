@@ -197,7 +197,6 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 		Device:   "Mobile",
 		Platform: "Android",
 		Browser:  "Chrome",
-		Version:  "109.0.5414.119",
 	}, nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
@@ -346,7 +345,6 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				Device:   "Mobile",
 				Platform: "Android",
 				Browser:  "Chrome",
-				Version:  "109.0.5414.119",
 			}, nil)
 
 			if tc.expectedError == nil {
@@ -412,7 +410,6 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 					Device:   "Mobile",
 					Platform: "Android",
 					Browser:  "Chrome",
-					Version:  "109.0.5414.119",
 				}, nil)
 			}
 
@@ -575,7 +572,6 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				Device:   "Mobile",
 				Platform: "Android",
 				Browser:  "Chrome",
-				Version:  "109.0.5414.119",
 			}, nil)
 
 			if tc.expectedError == nil {
@@ -640,7 +636,6 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 					Device:   "Mobile",
 					Platform: "Android",
 					Browser:  "Chrome",
-					Version:  "109.0.5414.119",
 				}, nil)
 			}
 
@@ -698,7 +693,6 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		Device:   "Mobile",
 		Platform: "Android",
 		Browser:  "Chrome",
-		Version:  "109.0.5414.119",
 	}
 
 	testCases := []struct {

@@ -16,6 +16,7 @@ type RedirectRequestData struct {
 	RequestID string
 }
 
+// GetParam is a helper function for convenient access to the request query params.
 func (rrd *RedirectRequestData) GetParam(key string) []string {
 	if val, ok := rrd.Params[key]; ok {
 		return val

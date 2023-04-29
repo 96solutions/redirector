@@ -3,6 +3,7 @@ package interactor
 import (
 	"context"
 	"errors"
+	"log"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -60,6 +61,7 @@ type clickProcessingResult struct {
 }
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
+// RedirectInteractor interface describes the service to handle requests and return the following target URL to redirect to.
 type RedirectInteractor interface {
 	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error)
 }
@@ -72,6 +74,7 @@ type redirectInteractor struct {
 	tokenRegExp             *regexp.Regexp
 }
 
+// NewRedirectInteractor function creates RedirectInteractor implementation.
 func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, clkRepo repository.ClicksRepository, ipAddressParser service.IpAddressParserInterface, userAgentParser service.UserAgentParser) RedirectInteractor {
 	compiledRegExp, err := regexp.Compile(`{({)?(\w+)(})?}`)
 	if err != nil {
@@ -87,6 +90,7 @@ func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, 
 	}
 }
 
+// Redirect function handles requests and returns the target URL to redirect traffic to.
 func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error) {
 	trackingLink := r.trackingLinksRepository.FindTrackingLink(ctx, slug)
 	if trackingLink == nil {
@@ -103,7 +107,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
 	if err != nil {
-		//TODO: log error
+		log.Printf("an error occured while parsing ip address (%s). error: %s\n", requestData.IP, err)
 	}
 	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
 		return nil, UnsupportedGeoError
@@ -111,7 +115,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
 	if err != nil {
-		//TODO: log error
+		log.Printf("an error occured while parsing user-agent header (%s). error: %s\n", requestData.UserAgent, err)
 	}
 	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
 		return nil, UnsupportedDeviceError
