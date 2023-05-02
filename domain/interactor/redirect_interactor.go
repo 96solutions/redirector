@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lroman242/redirector/domain/dto"
@@ -61,6 +62,7 @@ type clickProcessingResult struct {
 }
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
+
 // RedirectInteractor interface describes the service to handle requests and return the following target URL to redirect to.
 type RedirectInteractor interface {
 	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error)
@@ -72,14 +74,35 @@ type redirectInteractor struct {
 	ipAddressParser         service.IpAddressParserInterface
 	userAgentParser         service.UserAgentParser
 	tokenRegExp             *regexp.Regexp
+	clickHandlers           []ClickHandlerInterface
 }
 
 // NewRedirectInteractor function creates RedirectInteractor implementation.
-func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, clkRepo repository.ClicksRepository, ipAddressParser service.IpAddressParserInterface, userAgentParser service.UserAgentParser) RedirectInteractor {
+func NewRedirectInteractor(
+	trkRepo repository.TrackingLinksRepositoryInterface,
+	clkRepo repository.ClicksRepository,
+	ipAddressParser service.IpAddressParserInterface,
+	userAgentParser service.UserAgentParser,
+	clickHandlers []ClickHandlerInterface,
+) RedirectInteractor {
 	compiledRegExp, err := regexp.Compile(`{({)?(\w+)(})?}`)
 	if err != nil {
 		panic(err)
 	}
+
+	// create default click handler which will save click to the database
+	//TODO: move it to separate implementation of ClickHandlerInterface
+	clickHandlers = append(clickHandlers, ClickHandlerFunc(func(ctx context.Context, click *entity.Click) <-chan *clickProcessingResult {
+		output := make(chan *clickProcessingResult)
+		go func(ctx context.Context, click *entity.Click) {
+			defer close(output)
+			output <- &clickProcessingResult{
+				Click: click,
+				Err:   clkRepo.Save(ctx, click),
+			}
+		}(ctx, click)
+		return output
+	}))
 
 	return &redirectInteractor{
 		trackingLinksRepository: trkRepo,
@@ -87,6 +110,7 @@ func NewRedirectInteractor(trkRepo repository.TrackingLinksRepositoryInterface, 
 		ipAddressParser:         ipAddressParser,
 		userAgentParser:         userAgentParser,
 		tokenRegExp:             compiledRegExp,
+		clickHandlers:           clickHandlers,
 	}
 }
 
@@ -240,17 +264,36 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 		P4: strings.Join(requestData.GetParam("p4"), ","),
 	}
 
-	output := make(chan *clickProcessingResult)
-	go func(ctx context.Context, click *entity.Click) {
-		defer close(output)
-		err := r.clicksRepository.Save(ctx, click)
-		output <- &clickProcessingResult{
-			Click: click,
-			Err:   err,
-		}
-	}(ctx, click)
+	outputs := make([]<-chan *clickProcessingResult, len(r.clickHandlers))
+	for _, handler := range r.clickHandlers {
+		outputs = append(outputs, handler.HandleClick(ctx, click))
+	}
 
-	return output
+	return merge(outputs...)
+}
+
+// merge function will fan-in the results received from ClickHandlerInterface(s).
+func merge(cs ...<-chan *clickProcessingResult) <-chan *clickProcessingResult {
+	var wg sync.WaitGroup
+	out := make(chan *clickProcessingResult)
+
+	output := func(c <-chan *clickProcessingResult) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
+	}
+
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }
 
 // contains checks if a string is present in a slice.
