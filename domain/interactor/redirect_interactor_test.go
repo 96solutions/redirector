@@ -38,7 +38,9 @@ func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
 	if !errors.Is(err, TrackingLinkNotFoundError) {
@@ -58,7 +60,8 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -95,7 +98,8 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -132,7 +136,8 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -171,7 +176,8 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -217,7 +223,8 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		RequestID: "someUniqueRequestID",
@@ -440,7 +447,8 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -823,7 +831,9 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		},
 		//TODO: test other tokens
 	}
-	srv := NewRedirectInteractor(trkRepo, clkRepo, ipAddressParser, userAgentParser, make([]ClickHandlerInterface, 0))
+
+	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
+	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -53,10 +53,10 @@ const (
 
 type redirectResult struct {
 	TargetURL string
-	OutputCh  <-chan *clickProcessingResult
+	OutputCh  <-chan *ClickProcessingResult
 }
 
-type clickProcessingResult struct {
+type ClickProcessingResult struct {
 	Click *entity.Click
 	Err   error
 }
@@ -70,7 +70,6 @@ type RedirectInteractor interface {
 
 type redirectInteractor struct {
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
-	clicksRepository        repository.ClicksRepository
 	ipAddressParser         service.IpAddressParserInterface
 	userAgentParser         service.UserAgentParser
 	tokenRegExp             *regexp.Regexp
@@ -80,7 +79,6 @@ type redirectInteractor struct {
 // NewRedirectInteractor function creates RedirectInteractor implementation.
 func NewRedirectInteractor(
 	trkRepo repository.TrackingLinksRepositoryInterface,
-	clkRepo repository.ClicksRepository,
 	ipAddressParser service.IpAddressParserInterface,
 	userAgentParser service.UserAgentParser,
 	clickHandlers []ClickHandlerInterface,
@@ -90,23 +88,8 @@ func NewRedirectInteractor(
 		panic(err)
 	}
 
-	// create default click handler which will save click to the database
-	//TODO: move it to separate implementation of ClickHandlerInterface
-	clickHandlers = append(clickHandlers, ClickHandlerFunc(func(ctx context.Context, click *entity.Click) <-chan *clickProcessingResult {
-		output := make(chan *clickProcessingResult)
-		go func(ctx context.Context, click *entity.Click) {
-			defer close(output)
-			output <- &clickProcessingResult{
-				Click: click,
-				Err:   clkRepo.Save(ctx, click),
-			}
-		}(ctx, click)
-		return output
-	}))
-
 	return &redirectInteractor{
 		trackingLinksRepository: trkRepo,
-		clicksRepository:        clkRepo,
 		ipAddressParser:         ipAddressParser,
 		userAgentParser:         userAgentParser,
 		tokenRegExp:             compiledRegExp,
@@ -248,7 +231,7 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	return targetURL
 }
 
-func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *clickProcessingResult {
+func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *ClickProcessingResult {
 	click := &entity.Click{
 		ID:          requestData.RequestID,
 		TargetURL:   targetURL,
@@ -264,7 +247,7 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 		P4: strings.Join(requestData.GetParam("p4"), ","),
 	}
 
-	outputs := make([]<-chan *clickProcessingResult, len(r.clickHandlers))
+	outputs := make([]<-chan *ClickProcessingResult, len(r.clickHandlers))
 	for _, handler := range r.clickHandlers {
 		outputs = append(outputs, handler.HandleClick(ctx, click))
 	}
@@ -273,11 +256,11 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 }
 
 // merge function will fan-in the results received from ClickHandlerInterface(s).
-func merge(cs ...<-chan *clickProcessingResult) <-chan *clickProcessingResult {
+func merge(cs ...<-chan *ClickProcessingResult) <-chan *ClickProcessingResult {
 	var wg sync.WaitGroup
-	out := make(chan *clickProcessingResult)
+	out := make(chan *ClickProcessingResult)
 
-	output := func(c <-chan *clickProcessingResult) {
+	output := func(c <-chan *ClickProcessingResult) {
 		for n := range c {
 			out <- n
 		}
