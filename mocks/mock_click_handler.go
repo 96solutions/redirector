@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	dto "github.com/lroman242/redirector/domain/dto"
 	entity "github.com/lroman242/redirector/domain/entity"
-	interactor "github.com/lroman242/redirector/domain/interactor"
 )
 
 // MockClickHandlerInterface is a mock of ClickHandlerInterface interface.
@@ -37,10 +37,10 @@ func (m *MockClickHandlerInterface) EXPECT() *MockClickHandlerInterfaceMockRecor
 }
 
 // HandleClick mocks base method.
-func (m *MockClickHandlerInterface) HandleClick(ctx context.Context, click *entity.Click) <-chan *interactor.ClickProcessingResult {
+func (m *MockClickHandlerInterface) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HandleClick", ctx, click)
-	ret0, _ := ret[0].(<-chan *interactor.ClickProcessingResult)
+	ret0, _ := ret[0].(<-chan *dto.ClickProcessingResult)
 	return ret0
 }
 

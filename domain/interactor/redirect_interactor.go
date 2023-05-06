@@ -53,12 +53,7 @@ const (
 
 type redirectResult struct {
 	TargetURL string
-	OutputCh  <-chan *ClickProcessingResult
-}
-
-type ClickProcessingResult struct {
-	Click *entity.Click
-	Err   error
+	OutputCh  <-chan *dto.ClickProcessingResult
 }
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
@@ -231,7 +226,7 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	return targetURL
 }
 
-func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *ClickProcessingResult {
+func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *dto.ClickProcessingResult {
 	click := &entity.Click{
 		ID:          requestData.RequestID,
 		TargetURL:   targetURL,
@@ -247,7 +242,7 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 		P4: strings.Join(requestData.GetParam("p4"), ","),
 	}
 
-	outputs := make([]<-chan *ClickProcessingResult, len(r.clickHandlers))
+	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
 	for _, handler := range r.clickHandlers {
 		outputs = append(outputs, handler.HandleClick(ctx, click))
 	}
@@ -256,11 +251,11 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 }
 
 // merge function will fan-in the results received from ClickHandlerInterface(s).
-func merge(cs ...<-chan *ClickProcessingResult) <-chan *ClickProcessingResult {
+func merge(cs ...<-chan *dto.ClickProcessingResult) <-chan *dto.ClickProcessingResult {
 	var wg sync.WaitGroup
-	out := make(chan *ClickProcessingResult)
+	out := make(chan *dto.ClickProcessingResult)
 
-	output := func(c <-chan *ClickProcessingResult) {
+	output := func(c <-chan *dto.ClickProcessingResult) {
 		for n := range c {
 			out <- n
 		}

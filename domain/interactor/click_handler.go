@@ -3,6 +3,7 @@ package interactor
 import (
 	"context"
 
+	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
 	"github.com/lroman242/redirector/domain/repository"
 )
@@ -10,14 +11,14 @@ import (
 //go:generate mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
 // ClickHandlerInterface describes handler which can manage the entity.Click.
 type ClickHandlerInterface interface {
-	HandleClick(ctx context.Context, click *entity.Click) <-chan *ClickProcessingResult
+	HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult
 }
 
 // ClickHandlerFunc type is a simple implementation of ClickHandlerInterface.
-type ClickHandlerFunc func(ctx context.Context, click *entity.Click) <-chan *ClickProcessingResult
+type ClickHandlerFunc func(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult
 
 // HandleClick function will do some work with the provided entity.Click.
-func (ch ClickHandlerFunc) HandleClick(ctx context.Context, click *entity.Click) <-chan *ClickProcessingResult {
+func (ch ClickHandlerFunc) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
 	return ch(ctx, click)
 }
 
@@ -29,12 +30,12 @@ func NewStoreClickHandler(clkRepository repository.ClicksRepository) ClickHandle
 	return &storeClickHandler{repo: clkRepository}
 }
 
-func (sch *storeClickHandler) HandleClick(ctx context.Context, click *entity.Click) <-chan *ClickProcessingResult {
-	output := make(chan *ClickProcessingResult)
+func (sch *storeClickHandler) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
+	output := make(chan *dto.ClickProcessingResult)
 
 	go func(ctx context.Context, click *entity.Click) {
 		defer close(output)
-		output <- &ClickProcessingResult{
+		output <- &dto.ClickProcessingResult{
 			Click: click,
 			Err:   sch.repo.Save(ctx, click),
 		}
