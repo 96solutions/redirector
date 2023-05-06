@@ -26,6 +26,10 @@
     - beego
   - gRPC controller
 - Add logs
+  - https://github.com/natefinch/lumberjack
+  - https://github.com/Sirupsen/logrus
+  - https://github.com/rs/zerolog
+  - https://github.com/uber-go/zap
 - Add tracing
 - Add health check
 

@@ -3,7 +3,6 @@ package interactor
 import (
 	"context"
 	"errors"
-	"log"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -51,19 +50,15 @@ const (
 	PlatformToken     = "{platform}"
 )
 
-type redirectResult struct {
-	TargetURL string
-	OutputCh  <-chan *dto.ClickProcessingResult
-}
-
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
 
 // RedirectInteractor interface describes the service to handle requests and return the following target URL to redirect to.
 type RedirectInteractor interface {
-	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error)
+	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error)
 }
 
 type redirectInteractor struct {
+	log                     service.Logger
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
 	ipAddressParser         service.IpAddressParserInterface
 	userAgentParser         service.UserAgentParser
@@ -73,6 +68,7 @@ type redirectInteractor struct {
 
 // NewRedirectInteractor function creates RedirectInteractor implementation.
 func NewRedirectInteractor(
+	logger service.Logger,
 	trkRepo repository.TrackingLinksRepositoryInterface,
 	ipAddressParser service.IpAddressParserInterface,
 	userAgentParser service.UserAgentParser,
@@ -84,6 +80,7 @@ func NewRedirectInteractor(
 	}
 
 	return &redirectInteractor{
+		log:                     logger,
 		trackingLinksRepository: trkRepo,
 		ipAddressParser:         ipAddressParser,
 		userAgentParser:         userAgentParser,
@@ -93,7 +90,7 @@ func NewRedirectInteractor(
 }
 
 // Redirect function handles requests and returns the target URL to redirect traffic to.
-func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*redirectResult, error) {
+func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error) {
 	trackingLink := r.trackingLinksRepository.FindTrackingLink(ctx, slug)
 	if trackingLink == nil {
 		return nil, TrackingLinkNotFoundError
@@ -109,7 +106,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
 	if err != nil {
-		log.Printf("an error occured while parsing ip address (%s). error: %s\n", requestData.IP, err)
+		r.log.Errorf("an error occured while parsing ip address (%s). error: %s\n", requestData.IP, err)
 	}
 	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
 		return nil, UnsupportedGeoError
@@ -117,7 +114,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
 	if err != nil {
-		log.Printf("an error occured while parsing user-agent header (%s). error: %s\n", requestData.UserAgent, err)
+		r.log.Errorf("an error occured while parsing user-agent header (%s). error: %s\n", requestData.UserAgent, err)
 	}
 	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
 		return nil, UnsupportedDeviceError
@@ -139,16 +136,16 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 
 	outputCh := r.registerClick(ctx, targetURL, trackingLink, requestData, ua, countryCode)
 
-	return &redirectResult{
+	return &dto.RedirectResult{
 		TargetURL: targetURL,
 		OutputCh:  outputCh,
 	}, nil
 }
 
-func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, ctx context.Context, requestData *dto.RedirectRequestData, trackingLink *entity.TrackingLink, userAgent *valueobject.UserAgent, countryCode string) (*redirectResult, error) {
+func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, ctx context.Context, requestData *dto.RedirectRequestData, trackingLink *entity.TrackingLink, userAgent *valueobject.UserAgent, countryCode string) (*dto.RedirectResult, error) {
 	switch rr.RedirectType {
 	case valueobject.LinkRedirectType:
-		return &redirectResult{
+		return &dto.RedirectResult{
 			TargetURL: rr.RedirectURL,
 			OutputCh:  r.registerClick(ctx, rr.RedirectURL, trackingLink, requestData, userAgent, countryCode),
 		}, nil

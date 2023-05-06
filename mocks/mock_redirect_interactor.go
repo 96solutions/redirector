@@ -6,10 +6,10 @@ package mocks
 
 import (
 	context "context"
-	net "net"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	dto "github.com/lroman242/redirector/domain/dto"
 )
 
 // MockRedirectInteractor is a mock of RedirectInteractor interface.
@@ -36,16 +36,16 @@ func (m *MockRedirectInteractor) EXPECT() *MockRedirectInteractorMockRecorder {
 }
 
 // Redirect mocks base method.
-func (m *MockRedirectInteractor) Redirect(ctx context.Context, slug string, params map[string][]string, headers map[string]string, userAgent string, ip net.IP, protocol string) (string, error) {
+func (m *MockRedirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Redirect", ctx, slug, params, headers, userAgent, ip, protocol)
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "Redirect", ctx, slug, requestData)
+	ret0, _ := ret[0].(*dto.RedirectResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Redirect indicates an expected call of Redirect.
-func (mr *MockRedirectInteractorMockRecorder) Redirect(ctx, slug, params, headers, userAgent, ip, protocol interface{}) *gomock.Call {
+func (mr *MockRedirectInteractorMockRecorder) Redirect(ctx, slug, requestData interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Redirect", reflect.TypeOf((*MockRedirectInteractor)(nil).Redirect), ctx, slug, params, headers, userAgent, ip, protocol)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Redirect", reflect.TypeOf((*MockRedirectInteractor)(nil).Redirect), ctx, slug, requestData)
 }

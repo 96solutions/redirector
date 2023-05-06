@@ -17,9 +17,28 @@ import (
 	"github.com/lroman242/redirector/mocks"
 )
 
+func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...ClickHandlerInterface) (
+	RedirectInteractor,
+	*mocks.MockLogger,
+	*mocks.MockTrackingLinksRepositoryInterface,
+	*mocks.MockIpAddressParserInterface,
+	*mocks.MockUserAgentParser,
+) {
+	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
+	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
+	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	logger := mocks.NewMockLogger(ctrl)
+
+	srv := NewRedirectInteractor(logger, trkRepo, ipAddressParser, userAgentParser, handlers)
+
+	return srv, logger, trkRepo, ipAddressParser, userAgentParser
+}
+
 func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -30,17 +49,7 @@ func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	}
 	expectedSlug := "testSlug123"
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(nil)
-
-	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
 	if !errors.Is(err, TrackingLinkNotFoundError) {
@@ -55,13 +64,7 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -93,13 +96,7 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -131,13 +128,7 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, ipAddressParser, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -171,13 +162,7 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -218,13 +203,8 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		RequestID: "someUniqueRequestID",
@@ -442,13 +422,8 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -669,10 +644,8 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
@@ -832,9 +805,6 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		//TODO: test other tokens
 	}
 
-	clickHandlers := []ClickHandlerInterface{NewStoreClickHandler(clkRepo)}
-	srv := NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, clickHandlers)
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if len(tc.tokens) > 0 {
@@ -878,5 +848,57 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 
 			<-rResult.OutputCh
 		})
+	}
+}
+
+func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	srv, logger, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
+
+	expectedDto := &dto.RedirectRequestData{
+		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
+		Headers:   make(map[string]string),
+		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+		IP:        net.ParseIP("178.43.146.107"),
+		Protocol:  "http",
+		Referer:   "https://httpbin.org",
+		RequestID: "someUniqueRequestID",
+	}
+	expectedSlug := "testSlug123"
+	expectedTrkLink := entity.TrackingLink{
+		IsActive:           true,
+		Slug:               expectedSlug,
+		AllowedProtocols:   []string{},
+		AllowedGeos:        []string{},
+		AllowedDevices:     []string{},
+		IsCampaignOveraged: false,
+		IsCampaignActive:   true,
+		TargetURLTemplate:  "http://target.url/path",
+		CampaignID:         "1234",
+	}
+	expectedCountry := ""
+	expectedIPAddressParseError := errors.New("expected ip address parse error")
+	expectedUserAgentParseError := errors.New("expected user agent parse error")
+	expectedUserAgent := &valueobject.UserAgent{
+		Bot:      false,
+		Device:   "Mobile",
+		Platform: "Android",
+		Browser:  "Chrome",
+	}
+
+	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(&expectedTrkLink)
+	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return(expectedCountry, expectedIPAddressParseError)
+	userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(expectedUserAgent, expectedUserAgentParseError)
+	logger.EXPECT().Errorf(gomock.Any(), expectedDto.IP, expectedIPAddressParseError)
+	logger.EXPECT().Errorf(gomock.Any(), expectedDto.UserAgent, expectedUserAgentParseError)
+
+	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
+	if err != nil {
+		t.Errorf("unexpected error. got %s\n", err)
+	}
+	if rResult.TargetURL != expectedTrkLink.TargetURLTemplate {
+		t.Errorf("unexpected target url received. expected %s but got %s\n", expectedTrkLink.TargetURLTemplate, rResult.TargetURL)
 	}
 }
