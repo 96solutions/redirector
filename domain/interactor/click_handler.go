@@ -26,10 +26,12 @@ type storeClickHandler struct {
 	repo repository.ClicksRepository
 }
 
+// NewStoreClickHandler function creates implementation of ClickHandlerInterface which saves entity.Click to the storage using repository.ClicksRepository.
 func NewStoreClickHandler(clkRepository repository.ClicksRepository) ClickHandlerInterface {
 	return &storeClickHandler{repo: clkRepository}
 }
 
+// HandleClick function will do some work with the provided entity.Click.
 func (sch *storeClickHandler) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
 	output := make(chan *dto.ClickProcessingResult)
 

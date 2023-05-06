@@ -18,6 +18,7 @@ func (l *zapSugarLoggerWrap) With(args ...interface{}) service.Logger {
 	return l
 }
 
+//TODO: use config to init logger.
 func NewZapLogger(logLevel string) service.Logger {
 	lvl, err := zapcore.ParseLevel(logLevel)
 	if err != nil {
