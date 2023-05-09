@@ -1,40 +1,81 @@
 package config
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
+var lock = &sync.Mutex{}
 var applicationConfig *appConfig
 
 type appConfig struct {
-	Name string `mapstructure:"APP_NAME"`
-	Mode string `mapstructure:"APP_MODE"`
-
-	LogLevel string `mapstructure:"LOG_LEVEL"`
-	LogDir   string `mapstructure:"LOG_DIR"`
-	LogFile  string `mapstructure:"LOG_FILE"`
-
-	StorageHost     string `mapstructure:"STORAGE_HOST"`
-	StoragePort     string `mapstructure:"STORAGE_PORT"`
-	StorageUsername string `mapstructure:"STORAGE_USERNAME"`
-	StoragePassword string `mapstructure:"STORAGE_PASSWORD"`
-	StorageDatabase string `mapstructure:"STORAGE_DATABASE"`
-
-	ServerHost string `mapstructure:"SERVER_HOST"`
-	ServerPort string `mapstructure:"SERVER_PORT"`
+	MySQLConf      *mysqlConf
+	LoggerConf     *loggerConf
+	HttpServerConf *httpServerConf
 }
 
-func InitConfig() *appConfig {
-	loadEnvVariables()
+func (cfg *appConfig) String() string {
+	cfgJSON, _ := json.MarshalIndent(cfg, "", "    ")
 
-	viper.OnConfigChange(func(e fsnotify.Event) {
-		fmt.Println("Config file changed:", e.Name)
-		loadEnvVariables()
-	})
-	viper.WatchConfig()
+	return string(cfgJSON)
+}
+
+func GetConfig() *appConfig {
+	if applicationConfig == nil {
+		lock.Lock()
+		defer lock.Unlock()
+		if applicationConfig == nil {
+			applicationConfig = initConfig()
+		}
+	}
 
 	return applicationConfig
+}
+
+func initConfig() *appConfig {
+	// Tell viper the path/location of your env file
+	//viper.AddConfigPath(".")
+
+	// Tell viper the name of your file
+	viper.SetConfigFile(viper.Get("config").(string))
+
+	// Tell viper the type of your file
+	viper.SetConfigType("env")
+
+	viper.AutomaticEnv()
+
+	// Viper reads all the variables from env file and log error if any found
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatal("Error reading env file ", err)
+	}
+
+	cfg := new(appConfig)
+	cfg.HttpServerConf = new(httpServerConf)
+	cfg.MySQLConf = new(mysqlConf)
+	cfg.LoggerConf = new(loggerConf)
+
+	// Viper unmarshals the loaded env varialbes into the config structs
+	if err := viper.Unmarshal(&cfg.HttpServerConf); err != nil {
+		log.Fatalf("cannot unmarshal HttpServerConf. error: %s", err)
+	}
+	if err := viper.Unmarshal(&cfg.MySQLConf); err != nil {
+		log.Fatalf("cannot unmarshal MySQLConf. error: %s", err)
+	}
+	if err := viper.Unmarshal(&cfg.LoggerConf); err != nil {
+		log.Fatalf("cannot unmarshal LoggerConf. error: %s", err)
+	}
+
+	// add watcher on init
+	if applicationConfig == nil {
+		viper.OnConfigChange(func(e fsnotify.Event) {
+			applicationConfig = initConfig()
+		})
+		viper.WatchConfig()
+	}
+
+	return cfg
 }
