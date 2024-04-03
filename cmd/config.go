@@ -15,3 +15,7 @@ var configCmd = &cobra.Command{
 		fmt.Printf("Application config:\n%s\n", config.GetConfig())
 	},
 }
+
+func init() {
+	rootCmd.AddCommand(configCmd)
+}

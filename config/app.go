@@ -13,7 +13,7 @@ var lock = &sync.Mutex{}
 var applicationConfig *appConfig
 
 type appConfig struct {
-	MySQLConf      *mysqlConf
+	DBConf         *dbConf
 	LoggerConf     *loggerConf
 	HttpServerConf *httpServerConf
 }
@@ -55,15 +55,15 @@ func initConfig() *appConfig {
 
 	cfg := new(appConfig)
 	cfg.HttpServerConf = new(httpServerConf)
-	cfg.MySQLConf = new(mysqlConf)
+	cfg.DBConf = new(dbConf)
 	cfg.LoggerConf = new(loggerConf)
 
 	// Viper unmarshals the loaded env varialbes into the config structs
 	if err := viper.Unmarshal(&cfg.HttpServerConf); err != nil {
 		log.Fatalf("cannot unmarshal HttpServerConf. error: %s", err)
 	}
-	if err := viper.Unmarshal(&cfg.MySQLConf); err != nil {
-		log.Fatalf("cannot unmarshal MySQLConf. error: %s", err)
+	if err := viper.Unmarshal(&cfg.DBConf); err != nil {
+		log.Fatalf("cannot unmarshal DBConf. error: %s", err)
 	}
 	if err := viper.Unmarshal(&cfg.LoggerConf); err != nil {
 		log.Fatalf("cannot unmarshal LoggerConf. error: %s", err)
