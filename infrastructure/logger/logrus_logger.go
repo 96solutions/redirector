@@ -41,47 +41,47 @@ func (l *logrusLogger) With(args ...interface{}) service.Logger {
 }
 
 func (l *logrusLogger) Debug(args ...interface{}) {
-	log.Debug(args)
+	log.Debug(args...)
 }
 func (l *logrusLogger) Debugf(format string, args ...interface{}) {
-	log.Debugf(format, args)
+	log.Debugf(format, args...)
 }
 func (l *logrusLogger) Debugln(args ...interface{}) {
-	log.Debugln(args)
+	log.Debugln(args...)
 }
 func (l *logrusLogger) Info(args ...interface{}) {
-	log.Info(args)
+	log.Info(args...)
 }
 func (l *logrusLogger) Infof(format string, args ...interface{}) {
-	log.Infof(format, args)
+	log.Infof(format, args...)
 }
 func (l *logrusLogger) Infoln(args ...interface{}) {
-	log.Infoln(args)
+	log.Infoln(args...)
 }
 func (l *logrusLogger) Warn(args ...interface{}) {
-	log.Warn(args)
+	log.Warn(args...)
 }
 func (l *logrusLogger) Warnf(format string, args ...interface{}) {
-	log.Warnf(format, args)
+	log.Warnf(format, args...)
 }
 func (l *logrusLogger) Warnln(args ...interface{}) {
-	log.Warnln(args)
+	log.Warnln(args...)
 }
 func (l *logrusLogger) Error(args ...interface{}) {
-	log.Error(args)
+	log.Error(args...)
 }
 func (l *logrusLogger) Errorf(format string, args ...interface{}) {
-	log.Errorf(format, args)
+	log.Errorf(format, args...)
 }
 func (l *logrusLogger) Errorln(args ...interface{}) {
-	log.Errorln(args)
+	log.Errorln(args...)
 }
 func (l *logrusLogger) Fatal(args ...interface{}) {
-	log.Fatal(args)
+	log.Fatal(args...)
 }
 func (l *logrusLogger) Fatalf(format string, args ...interface{}) {
-	log.Fatalf(format, args)
+	log.Fatalf(format, args...)
 }
 func (l *logrusLogger) Fatalln(args ...interface{}) {
-	log.Fatalln(args)
+	log.Fatalln(args...)
 }
