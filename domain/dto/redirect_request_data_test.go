@@ -1,6 +1,7 @@
-package dto
+package dto_test
 
 import (
+	"github.com/lroman242/redirector/domain/dto"
 	"strings"
 	"testing"
 )
@@ -30,7 +31,7 @@ func TestRedirectRequestData_GetParam(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			requestData := RedirectRequestData{
+			requestData := dto.RedirectRequestData{
 				Params: tc.params,
 			}
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+
 	"github.com/lroman242/redirector/domain/service"
 	"github.com/lroman242/redirector/domain/valueobject"
 	"github.com/ua-parser/uap-go/uaparser"

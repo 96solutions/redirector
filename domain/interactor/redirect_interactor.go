@@ -1,3 +1,4 @@
+// Package interactor contains all use-case interactors preformed by the application.
 package interactor
 
 import (
@@ -74,10 +75,7 @@ func NewRedirectInteractor(
 	userAgentParser service.UserAgentParser,
 	clickHandlers []ClickHandlerInterface,
 ) RedirectInteractor {
-	compiledRegExp, err := regexp.Compile(`{({)?(\w+)(})?}`)
-	if err != nil {
-		panic(err)
-	}
+	compiledRegExp := regexp.MustCompile(`{({)?(\w+)(})?}`)
 
 	return &redirectInteractor{
 		log:                     logger,
@@ -90,7 +88,13 @@ func NewRedirectInteractor(
 }
 
 // Redirect function handles requests and returns the target URL to redirect traffic to.
-func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error) {
+func (r *redirectInteractor) Redirect(
+	ctx context.Context,
+	slug string,
+	requestData *dto.RedirectRequestData,
+) (*dto.RedirectResult, error) {
+	// TODO: check if sub redirect and drop on >= 3
+
 	trackingLink := r.trackingLinksRepository.FindTrackingLink(ctx, slug)
 	if trackingLink == nil {
 		return nil, TrackingLinkNotFoundError
@@ -109,6 +113,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		r.log.Errorf("an error occured while parsing ip address (%s). error: %s\n", requestData.IP, err)
 	}
 	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
+		//TODO: handle trackingLink.UnsupportedGeoRedirectRules
 		return nil, UnsupportedGeoError
 	}
 
@@ -117,8 +122,10 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		r.log.Errorf("an error occured while parsing user-agent header (%s). error: %s\n", requestData.UserAgent, err)
 	}
 	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
+		//TODO: handle trackingLink.UnsupportedDeviceRedirectRules
 		return nil, UnsupportedDeviceError
 	}
+	//TODO: check OS + handle trackingLink.UnsupportedOSRedirectRules
 
 	if trackingLink.IsCampaignOveraged {
 		return r.handleRedirectRules(trackingLink.CampaignOverageRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
@@ -128,6 +135,7 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 		return r.handleRedirectRules(trackingLink.CampaignDisabledRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
 	}
 
+	//TODO: prepare target URL template!
 	//if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
 	//	//TODO: handle deeplink
 	//}
@@ -142,7 +150,14 @@ func (r *redirectInteractor) Redirect(ctx context.Context, slug string, requestD
 	}, nil
 }
 
-func (r *redirectInteractor) handleRedirectRules(rr *valueobject.RedirectRules, ctx context.Context, requestData *dto.RedirectRequestData, trackingLink *entity.TrackingLink, userAgent *valueobject.UserAgent, countryCode string) (*dto.RedirectResult, error) {
+func (r *redirectInteractor) handleRedirectRules(
+	rr *valueobject.RedirectRules,
+	ctx context.Context,
+	requestData *dto.RedirectRequestData,
+	trackingLink *entity.TrackingLink,
+	userAgent *valueobject.UserAgent,
+	countryCode string,
+) (*dto.RedirectResult, error) {
 	switch rr.RedirectType {
 	case valueobject.LinkRedirectType:
 		return &dto.RedirectResult{
@@ -169,54 +184,54 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	for _, token := range tokens {
 		switch token {
 		case IPAddressToken:
-			targetURL = strings.Replace(targetURL, token, requestData.IP.String(), -1)
+			targetURL = strings.ReplaceAll(targetURL, token, requestData.IP.String())
 		case ClickIDToken:
-			targetURL = strings.Replace(targetURL, token, requestData.RequestID, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, requestData.RequestID)
 		case UserAgentToken:
-			targetURL = strings.Replace(targetURL, token, requestData.UserAgent, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, requestData.UserAgent)
 		case CampaignIDToken:
-			targetURL = strings.Replace(targetURL, token, trackingLink.CampaignID, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.CampaignID)
 		case AffiliateIDToken:
-			targetURL = strings.Replace(targetURL, token, trackingLink.AffiliateID, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.AffiliateID)
 		case SourceIDToken:
-			targetURL = strings.Replace(targetURL, token, trackingLink.SourceID, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.SourceID)
 		case AdvertiserIDToken:
-			targetURL = strings.Replace(targetURL, token, trackingLink.AdvertiserID, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.AdvertiserID)
 		case DateToken:
-			targetURL = strings.Replace(targetURL, token, time.Now().Format("2006-02-01"), 1)
+			targetURL = strings.ReplaceAll(targetURL, token, time.Now().Format("2006-01-02"))
 		case DateTimeToken:
-			targetURL = strings.Replace(targetURL, token, time.Now().Format("2006-01-02T15:04:05"), 1)
+			targetURL = strings.ReplaceAll(targetURL, token, time.Now().Format("2006-01-02T15:04:05"))
 		case TimestampToken:
-			targetURL = strings.Replace(targetURL, token, strconv.FormatInt(time.Now().Unix(), 10), 1)
+			targetURL = strings.ReplaceAll(targetURL, token, strconv.FormatInt(time.Now().Unix(), 10))
 		case P1Token:
 			values := requestData.GetParam("p1")
-			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
 		case P2Token:
 			values := requestData.GetParam("p2")
-			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
 		case P3Token:
 			values := requestData.GetParam("p3")
-			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
 		case P4Token:
 			values := requestData.GetParam("p4")
-			targetURL = strings.Replace(targetURL, token, strings.Join(values, ","), -1)
+			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
 		case CountryCodeToken:
-			targetURL = strings.Replace(targetURL, token, countryCode, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, countryCode)
 		case RefererToken:
-			targetURL = strings.Replace(targetURL, token, requestData.Referer, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, requestData.Referer)
 		case RandomStrToken:
-			targetURL = strings.Replace(targetURL, token, randString(32), 1)
+			targetURL = strings.ReplaceAll(targetURL, token, randString(32))
 		case RandomIntToken:
-			targetURL = strings.Replace(targetURL, token, strconv.Itoa(rand.Intn(99999999-10000)+10000), 1)
+			targetURL = strings.ReplaceAll(targetURL, token, strconv.Itoa(rand.Intn(99999999-10000)+10000))
 		case DeviceToken:
-			targetURL = strings.Replace(targetURL, token, ua.Device, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, ua.Device)
 		case PlatformToken:
-			targetURL = strings.Replace(targetURL, token, ua.Platform, -1)
+			targetURL = strings.ReplaceAll(targetURL, token, ua.Platform)
 		//TODO: add new tokens
 
-		//replace undefined tokens with empty string
+		// replace undefined tokens with empty string
 		default:
-			targetURL = strings.Replace(targetURL, token, "", -1)
+			targetURL = strings.ReplaceAll(targetURL, token, "")
 		}
 	}
 
@@ -248,26 +263,27 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 }
 
 // merge function will fan-in the results received from ClickHandlerInterface(s).
-func merge(cs ...<-chan *dto.ClickProcessingResult) <-chan *dto.ClickProcessingResult {
+func merge(clkProcessingResultChans ...<-chan *dto.ClickProcessingResult) <-chan *dto.ClickProcessingResult {
 	var wg sync.WaitGroup
 	out := make(chan *dto.ClickProcessingResult)
 
-	output := func(c <-chan *dto.ClickProcessingResult) {
+	mergeFunc := func(c <-chan *dto.ClickProcessingResult) {
 		for n := range c {
 			out <- n
 		}
 		wg.Done()
 	}
 
-	wg.Add(len(cs))
-	for _, c := range cs {
-		go output(c)
+	wg.Add(len(clkProcessingResultChans))
+	for _, c := range clkProcessingResultChans {
+		go mergeFunc(c)
 	}
 
 	go func() {
 		wg.Wait()
 		close(out)
 	}()
+
 	return out
 }
 

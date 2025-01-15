@@ -1,3 +1,4 @@
+// Package config contains structures that represent configs for different application modules.
 package config
 
 import (
@@ -38,7 +39,7 @@ func GetConfig() *appConfig {
 
 func initConfig() *appConfig {
 	// Tell viper the path/location of your env file
-	//viper.AddConfigPath(".")
+	// viper.AddConfigPath(".")
 
 	// Tell viper the name of your file
 	viper.SetConfigFile(viper.Get("config").(string))

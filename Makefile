@@ -4,6 +4,9 @@ REVISION=$(shell sh -c "git rev-parse --short HEAD" | awk '{print $$1}')
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIR := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
+lint:
+	golangci-lint --exclude-use-default=false --out-format tab run ./...
+
 #all: clean build
 #
 #.PHONY: build

@@ -1,6 +1,6 @@
 module github.com/lroman242/redirector
 
-go 1.18
+go 1.22.1
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0

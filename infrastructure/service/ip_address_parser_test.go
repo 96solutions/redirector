@@ -1,9 +1,11 @@
-package service
+package service_test
 
 import (
+	"errors"
 	"net"
 	"testing"
 
+	"github.com/lroman242/redirector/infrastructure/service"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -13,7 +15,7 @@ func TestGeoIP2_Parse(t *testing.T) {
 		t.Errorf("cannot initialize GeoIP parser")
 	}
 
-	geoIpParser := NewGeoIP2(reader)
+	geoIpParser := service.NewGeoIP2(reader)
 
 	testCases := []struct {
 		name            string
@@ -37,8 +39,8 @@ func TestGeoIP2_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			countryCode, err := geoIpParser.Parse(net.ParseIP(tc.ip))
-			if err != tc.expectedError {
+			countryCode, internalErr := geoIpParser.Parse(net.ParseIP(tc.ip))
+			if !errors.Is(internalErr, tc.expectedError) {
 				t.Errorf("unexpected error. expected %s but got %s\n", tc.expectedError, err)
 			}
 			if countryCode != tc.expectedCountry {

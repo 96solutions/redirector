@@ -1,15 +1,17 @@
-package interactor
+package interactor_test
 
 import (
 	"context"
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/lroman242/redirector/domain/dto"
-	"github.com/lroman242/redirector/domain/entity"
-	"github.com/lroman242/redirector/mocks"
 	"net"
 	"reflect"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/lroman242/redirector/domain/dto"
+	"github.com/lroman242/redirector/domain/entity"
+	"github.com/lroman242/redirector/domain/interactor"
+	"github.com/lroman242/redirector/mocks"
 )
 
 func TestClickHandlerFunc_HandleClick(t *testing.T) {
@@ -27,7 +29,7 @@ func TestClickHandlerFunc_HandleClick(t *testing.T) {
 		P4:          "expectedP4",
 	}
 
-	expFunc := func(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
+	expFunc := func(_ context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
 		ch := make(chan *dto.ClickProcessingResult)
 		defer close(ch)
 
@@ -68,7 +70,7 @@ func TestClickHandlerFunc_HandleClick(t *testing.T) {
 		return ch
 	}
 
-	handlerFunc := ClickHandlerFunc(expFunc)
+	handlerFunc := interactor.ClickHandlerFunc(expFunc)
 	handlerFunc.HandleClick(context.Background(), expectedClick)
 }
 
@@ -94,16 +96,18 @@ func TestStoreClickHandler_HandleClick(t *testing.T) {
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 	clkRepo.EXPECT().Save(gomock.Any(), expectedClick).Return(expectedError)
 
-	handler := NewStoreClickHandler(clkRepo)
+	handler := interactor.NewStoreClickHandler(clkRepo)
 
 	outputCh := handler.HandleClick(context.Background(), expectedClick)
 
 	clickProcessingResult := <-outputCh
 
 	if !reflect.DeepEqual(clickProcessingResult.Click, expectedClick) {
-		t.Errorf("unexpected click received from processing result. expected %+v but got %+v\n", expectedClick, clickProcessingResult.Click)
+		t.Errorf("unexpected click received from processing result. expected %+v but got %+v\n",
+			expectedClick, clickProcessingResult.Click)
 	}
 	if !errors.Is(clickProcessingResult.Err, expectedError) {
-		t.Errorf("unexpected error received from processing result. expected `%s` but got `%s`\n", expectedError, clickProcessingResult.Err)
+		t.Errorf("unexpected error received from processing result. expected `%s` but got `%s`\n",
+			expectedError, clickProcessingResult.Err)
 	}
 }

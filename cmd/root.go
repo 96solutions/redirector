@@ -47,7 +47,10 @@ func init() {
 	rootCmd.PersistentFlags().Bool("http_server_ssl", false, "is ssl enabled")
 	rootCmd.PersistentFlags().String("http_server_cert", "path/cert.pem", "path to ssl certs")
 
-	viper.BindPFlags(rootCmd.PersistentFlags())
+	err := viper.BindPFlags(rootCmd.PersistentFlags())
+	if err != nil {
+		panic("Error: " + err.Error())
+	}
 }
 
 func initConfig() {

@@ -1,9 +1,10 @@
 package logger
 
 import (
+	"os"
+
 	"github.com/lroman242/redirector/domain/service"
 	log "github.com/sirupsen/logrus"
-	"os"
 )
 
 type logrusLogger struct {

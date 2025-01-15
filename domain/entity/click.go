@@ -1,8 +1,9 @@
 package entity
 
 import (
-	"github.com/lroman242/redirector/domain/valueobject"
 	"net"
+
+	"github.com/lroman242/redirector/domain/valueobject"
 )
 
 // Click type describes scope of data retrieved during redirect request via tracking link.

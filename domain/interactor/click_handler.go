@@ -9,6 +9,7 @@ import (
 )
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
+
 // ClickHandlerInterface describes handler which can manage the entity.Click.
 type ClickHandlerInterface interface {
 	HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult

@@ -32,9 +32,14 @@ func (s *MySQLStorage) FindTrackingLink(ctx context.Context, slug string) *entit
 		log.Printf("an error occured while preparing statement, error: %s", err)
 		return nil
 	}
+	defer stmt.Close()
 
 	result, err := stmt.QueryContext(ctx, slug)
 	if err != nil {
+		log.Printf("an error occured while executing statement, error: %s", err)
+		return nil
+	}
+	if result.Err() != nil {
 		log.Printf("an error occured while executing statement, error: %s", err)
 		return nil
 	}

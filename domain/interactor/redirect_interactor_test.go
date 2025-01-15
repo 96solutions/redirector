@@ -1,4 +1,4 @@
-package interactor
+package interactor_test
 
 import (
 	"context"
@@ -13,12 +13,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
+	"github.com/lroman242/redirector/domain/interactor"
 	"github.com/lroman242/redirector/domain/valueobject"
 	"github.com/lroman242/redirector/mocks"
 )
 
-func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...ClickHandlerInterface) (
-	RedirectInteractor,
+func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...interactor.ClickHandlerInterface) (
+	interactor.RedirectInteractor,
 	*mocks.MockLogger,
 	*mocks.MockTrackingLinksRepositoryInterface,
 	*mocks.MockIpAddressParserInterface,
@@ -29,7 +30,7 @@ func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...ClickHandlerInt
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
 	logger := mocks.NewMockLogger(ctrl)
 
-	srv := NewRedirectInteractor(logger, trkRepo, ipAddressParser, userAgentParser, handlers)
+	srv := interactor.NewRedirectInteractor(logger, trkRepo, ipAddressParser, userAgentParser, handlers)
 
 	return srv, logger, trkRepo, ipAddressParser, userAgentParser
 }
@@ -52,7 +53,7 @@ func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(nil)
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
-	if !errors.Is(err, TrackingLinkNotFoundError) {
+	if !errors.Is(err, interactor.TrackingLinkNotFoundError) {
 		t.Error("unexpected result, TrackingLinkNotFoundError expected")
 	}
 	if rResult != nil {
@@ -84,7 +85,7 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, TrackingLinkDisabledError) {
+	if !errors.Is(err, interactor.TrackingLinkDisabledError) {
 		t.Error("unexpected result, TrackingLinkDisabledError expected")
 	}
 	if rResult != nil {
@@ -116,7 +117,7 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, UnsupportedProtocolError) {
+	if !errors.Is(err, interactor.UnsupportedProtocolError) {
 		t.Error("unexpected result, UnsupportedProtocolError expected")
 	}
 	if rResult != nil {
@@ -150,7 +151,7 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, UnsupportedGeoError) {
+	if !errors.Is(err, interactor.UnsupportedGeoError) {
 		t.Error("unexpected result, UnsupportedGeoError expected")
 	}
 	if rResult != nil {
@@ -191,7 +192,7 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	}, nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, UnsupportedDeviceError) {
+	if !errors.Is(err, interactor.UnsupportedDeviceError) {
 		t.Error("unexpected result, UnsupportedDeviceError expected")
 	}
 	if rResult != nil {
@@ -204,7 +205,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		RequestID: "someUniqueRequestID",
@@ -300,7 +301,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     BlockRedirectError,
+			expectedError:     interactor.BlockRedirectError,
 		},
 		{
 			name: "OveragedRedirectRulesInvalidRedirectType",
@@ -319,7 +320,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     InvalidRedirectTypeError,
+			expectedError:     interactor.InvalidRedirectTypeError,
 		},
 	}
 
@@ -337,8 +338,8 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			if tc.expectedError == nil {
 				clkRepo.EXPECT().
 					Save(gomock.Any(), gomock.Any()).
-					//Return(nil)
-					DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+					// Return(nil)
+					DoAndReturn(func(_ context.Context, click *entity.Click) error {
 						if click.ID != expectedDto.RequestID {
 							t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
 						}
@@ -352,45 +353,48 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 
 			if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType ||
 				tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-				trkRepo.EXPECT().FindTrackingLink(context.Background(), gomock.Any()).DoAndReturn(func(ctx context.Context, arg interface{}) *entity.TrackingLink {
-					if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType {
-						slug, ok := arg.(string)
-						if !ok {
-							t.Error("invalid argument type. expected string")
-						}
-						if slug != expectedSlug2 {
-							t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
-						}
-					} else if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-						slug, ok := arg.(string)
-						if !ok {
-							t.Error("invalid argument type. expected string")
-						}
+				trkRepo.
+					EXPECT().
+					FindTrackingLink(context.Background(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, arg interface{}) *entity.TrackingLink {
+						if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType {
+							slug, ok := arg.(string)
+							if !ok {
+								t.Error("invalid argument type. expected string")
+							}
+							if slug != expectedSlug2 {
+								t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
+							}
+						} else if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
+							slug, ok := arg.(string)
+							if !ok {
+								t.Error("invalid argument type. expected string")
+							}
 
-						inArray := false
+							inArray := false
 
-						for _, sl := range expectedSlug3 {
-							if sl == slug {
-								inArray = true
+							for _, sl := range expectedSlug3 {
+								if sl == slug {
+									inArray = true
+								}
+							}
+
+							if !inArray {
+								t.Errorf("invalid argument received. expected one of %v but got %s", expectedSlug3, slug)
 							}
 						}
 
-						if !inArray {
-							t.Errorf("invalid argument received. expected one of %v but got %s", expectedSlug3, slug)
+						return &entity.TrackingLink{
+							IsActive:           true,
+							Slug:               expectedSlug,
+							AllowedProtocols:   []string{},
+							AllowedGeos:        []string{},
+							AllowedDevices:     []string{},
+							IsCampaignOveraged: false,
+							IsCampaignActive:   true,
+							TargetURLTemplate:  expectedTargetURL,
 						}
-					}
-
-					return &entity.TrackingLink{
-						IsActive:           true,
-						Slug:               expectedSlug,
-						AllowedProtocols:   []string{},
-						AllowedGeos:        []string{},
-						AllowedDevices:     []string{},
-						IsCampaignOveraged: false,
-						IsCampaignActive:   true,
-						TargetURLTemplate:  expectedTargetURL,
-					}
-				})
+					})
 				ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 				userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
 					Bot:      false,
@@ -415,7 +419,6 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
@@ -423,7 +426,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -522,7 +525,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     BlockRedirectError,
+			expectedError:     interactor.BlockRedirectError,
 		},
 		{
 			name: "CampaignDisabledRedirectRulesInvalidRedirectType",
@@ -542,7 +545,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     InvalidRedirectTypeError,
+			expectedError:     interactor.InvalidRedirectTypeError,
 		},
 	}
 
@@ -560,7 +563,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			if tc.expectedError == nil {
 				clkRepo.EXPECT().
 					Save(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+					DoAndReturn(func(_ context.Context, click *entity.Click) error {
 						if click.ID != expectedDto.RequestID {
 							t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
 						}
@@ -574,45 +577,48 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 
 			if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType ||
 				tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-				trkRepo.EXPECT().FindTrackingLink(context.Background(), gomock.Any()).DoAndReturn(func(ctx, arg interface{}) *entity.TrackingLink {
-					if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType {
-						slug, ok := arg.(string)
-						if !ok {
-							t.Error("invalid argument type. expected string")
-						}
-						if slug != expectedSlug2 {
-							t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
-						}
-					} else if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-						slug, ok := arg.(string)
-						if !ok {
-							t.Error("invalid argument type. expected string")
-						}
+				trkRepo.
+					EXPECT().
+					FindTrackingLink(context.Background(), gomock.Any()).
+					DoAndReturn(func(_, arg interface{}) *entity.TrackingLink {
+						if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType {
+							slug, ok := arg.(string)
+							if !ok {
+								t.Error("invalid argument type. expected string")
+							}
+							if slug != expectedSlug2 {
+								t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
+							}
+						} else if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
+							slug, ok := arg.(string)
+							if !ok {
+								t.Error("invalid argument type. expected string")
+							}
 
-						inArray := false
+							inArray := false
 
-						for _, sl := range expectedSlug3 {
-							if sl == slug {
-								inArray = true
+							for _, sl := range expectedSlug3 {
+								if sl == slug {
+									inArray = true
+								}
+							}
+
+							if !inArray {
+								t.Errorf("invalid argument received. expected one of %v but got %s", expectedSlug3, slug)
 							}
 						}
 
-						if !inArray {
-							t.Errorf("invalid argument received. expected one of %v but got %s", expectedSlug3, slug)
+						return &entity.TrackingLink{
+							IsActive:           true,
+							Slug:               expectedSlug,
+							AllowedProtocols:   []string{},
+							AllowedGeos:        []string{},
+							AllowedDevices:     []string{},
+							IsCampaignOveraged: false,
+							IsCampaignActive:   true,
+							TargetURLTemplate:  expectedTargetURL,
 						}
-					}
-
-					return &entity.TrackingLink{
-						IsActive:           true,
-						Slug:               expectedSlug,
-						AllowedProtocols:   []string{},
-						AllowedGeos:        []string{},
-						AllowedDevices:     []string{},
-						IsCampaignOveraged: false,
-						IsCampaignActive:   true,
-						TargetURLTemplate:  expectedTargetURL,
-					}
-				})
+					})
 				ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 				userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
 					Bot:      false,
@@ -635,7 +641,6 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			} else {
 				<-rResult.OutputCh
 			}
-
 		})
 	}
 }
@@ -645,7 +650,7 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, NewStoreClickHandler(clkRepo))
+	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
@@ -689,64 +694,74 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 			expectedTargetURL: expectedTrkLink.TargetURLTemplate,
 		},
 		{
-			name:              "RenderTokens_IPAddressToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{ip}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.IP),
+			name:    "RenderTokens_IPAddressToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{ip}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedDto.IP),
 		},
 		{
-			name:              "RenderTokens_ClickIDToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{click_id}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.RequestID),
+			name:    "RenderTokens_ClickIDToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{click_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedDto.RequestID),
 		},
 		{
-			name:              "RenderTokens_UserAgentToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{user_agent}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.UserAgent),
+			name:    "RenderTokens_UserAgentToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{user_agent}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedDto.UserAgent),
 		},
 		{
-			name:              "RenderTokens_CampaignIDToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{campaign_id}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.CampaignID),
+			name:    "RenderTokens_CampaignIDToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{campaign_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedTrkLink.CampaignID),
 		},
 		{
-			name:              "RenderTokens_AffiliateIDToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{aff_id}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.AffiliateID),
+			name:    "RenderTokens_AffiliateIDToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{aff_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedTrkLink.AffiliateID),
 		},
 		{
-			name:              "RenderTokens_SourceIDToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{source_id}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.SourceID),
+			name:    "RenderTokens_SourceIDToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{source_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedTrkLink.SourceID),
 		},
 		{
-			name:              "RenderTokens_AdvertiserIDToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{advertiser_id}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedTrkLink.AdvertiserID),
+			name:    "RenderTokens_AdvertiserIDToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{advertiser_id}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, expectedTrkLink.AdvertiserID),
 		},
 		{
-			name:              "RenderTokens_DateToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{date}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-02-01")),
+			name:    "RenderTokens_DateToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{date}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-01-02")),
 		},
 		{
-			name:              "RenderTokens_DateTimeToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{date_time}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-01-02T15:04:05")),
+			name:    "RenderTokens_DateTimeToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{date_time}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, time.Now().Format("2006-01-02T15:04:05")),
 		},
 		{
-			name:              "RenderTokens_TimestampToken",
-			trkLink:           expectedTrkLink,
-			tokens:            []string{"{timestamp}"},
-			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, strconv.FormatInt(time.Now().Unix(), 10)),
+			name:    "RenderTokens_TimestampToken",
+			trkLink: expectedTrkLink,
+			tokens:  []string{"{timestamp}"},
+			expectedTargetURL: fmt.Sprintf("%s?key0=%s",
+				expectedTrkLink.TargetURLTemplate, strconv.FormatInt(time.Now().Unix(), 10)),
 		},
 		{
 			name:    "RenderTokens_P1-P4Tokens",
@@ -772,18 +787,18 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 			tokens:            []string{"{referer}"},
 			expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, expectedDto.Referer),
 		},
-		//{
-		//	name:              "RenderTokens_RandomStrToken",
-		//	trkLink:           expectedTrkLink,
-		//	tokens:            []string{"{random_str}"},
-		//	expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, ""), //TODO:
-		//},
-		//{
-		//	name:              "RenderTokens_RandomIntToken",
-		//	trkLink:           expectedTrkLink,
-		//	tokens:            []string{"{random_int}"},
-		//	expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, "1"), //TODO:
-		//},
+		/*		{
+					name:              "RenderTokens_RandomStrToken",
+					trkLink:           expectedTrkLink,
+					tokens:            []string{"{random_str}"},
+					expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, ""), //TODO:
+				},
+				{
+					name:              "RenderTokens_RandomIntToken",
+					trkLink:           expectedTrkLink,
+					tokens:            []string{"{random_int}"},
+					expectedTargetURL: fmt.Sprintf("%s?key0=%s", expectedTrkLink.TargetURLTemplate, "1"), //TODO:
+				},*/
 		{
 			name:              "RenderTokens_DeviceToken",
 			trkLink:           expectedTrkLink,
@@ -825,8 +840,8 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 			userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(expectedUserAgent, nil)
 			clkRepo.EXPECT().
 				Save(gomock.Any(), gomock.Any()).
-				//Return(nil)
-				DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+				// Return(nil)
+				DoAndReturn(func(_ context.Context, click *entity.Click) error {
 					if click.ID != expectedDto.RequestID {
 						t.Errorf("unexpected click ID. expected %s but got %s", expectedDto.RequestID, click.ID)
 					}
@@ -899,6 +914,7 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 		t.Errorf("unexpected error. got %s\n", err)
 	}
 	if rResult.TargetURL != expectedTrkLink.TargetURLTemplate {
-		t.Errorf("unexpected target url received. expected %s but got %s\n", expectedTrkLink.TargetURLTemplate, rResult.TargetURL)
+		t.Errorf("unexpected target url received. expected %s but got %s\n",
+			expectedTrkLink.TargetURLTemplate, rResult.TargetURL)
 	}
 }

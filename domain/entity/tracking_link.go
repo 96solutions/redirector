@@ -20,8 +20,8 @@ type TrackingLink struct {
 
 	TargetURLTemplate string
 
-	//AllowDeeplink bool
-	//
+	// AllowDeeplink bool
+
 	CampaignID   string
 	AffiliateID  string
 	AdvertiserID string

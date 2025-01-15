@@ -1,8 +1,11 @@
-package service
+package service_test
 
 import (
-	"github.com/lroman242/redirector/domain/valueobject"
+	"errors"
 	"testing"
+
+	"github.com/lroman242/redirector/domain/valueobject"
+	"github.com/lroman242/redirector/infrastructure/service"
 )
 
 func TestUserAgentParser_Parse(t *testing.T) {
@@ -46,27 +49,30 @@ func TestUserAgentParser_Parse(t *testing.T) {
 				Platform:  "",
 				Browser:   "",
 			},
-			expectedError: EmptyUserAgentError,
+			expectedError: service.EmptyUserAgentError,
 		},
 	}
 
-	parser := NewUserAgentParser()
+	parser := service.NewUserAgentParser()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ua, err := parser.Parse(tc.userAgentStr)
-			if err != tc.expectedError {
+			if !errors.Is(err, tc.expectedError) {
 				t.Errorf("unexpected error: %s\n", err)
 			}
 
 			if ua.Browser != tc.expectedUserAgentObj.Browser {
-				t.Errorf("unexpected browser value parsed. expected %s but got %s\n", tc.expectedUserAgentObj.Browser, ua.Browser)
+				t.Errorf("unexpected browser value parsed. expected %s but got %s\n",
+					tc.expectedUserAgentObj.Browser, ua.Browser)
 			}
 			if ua.Platform != tc.expectedUserAgentObj.Platform {
-				t.Errorf("unexpected platform value parsed. expected %s but got %s\n", tc.expectedUserAgentObj.Platform, ua.Platform)
+				t.Errorf("unexpected platform value parsed. expected %s but got %s\n",
+					tc.expectedUserAgentObj.Platform, ua.Platform)
 			}
 			if ua.Device != tc.expectedUserAgentObj.Device {
-				t.Errorf("unexpected device value parsed. expected %s but got %s\n", tc.expectedUserAgentObj.Device, ua.Device)
+				t.Errorf("unexpected device value parsed. expected %s but got %s\n",
+					tc.expectedUserAgentObj.Device, ua.Device)
 			}
 		})
 	}
