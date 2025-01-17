@@ -2,3 +2,4 @@
 vendor/
 .env
 bin/
+redirector_*

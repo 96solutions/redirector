@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"log"
 
 	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -27,17 +27,17 @@ var migrateCmd = &cobra.Command{
 		cfg := config.GetConfig()
 		db, err := sql.Open("mysql", cfg.DBConf.DSN()+"?multiStatements=true")
 		if err != nil {
-			log.Fatalf("unable to connect to the database. error: %s", err)
+			panic(fmt.Errorf("unable to connect to the database. error: %w", err))
 		}
 
 		err = db.Ping()
 		if err != nil {
-			log.Fatalf("unsuccessfull ping database")
+			panic(fmt.Errorf("unsuccessfull ping database. error: %w", err))
 		}
 
 		driver, err := mysql.WithInstance(db, &mysql.Config{})
 		if err != nil {
-			log.Fatalln(err)
+			panic(err)
 		}
 		m, err := migrate.NewWithDatabaseInstance(
 			"file://./migrations",
@@ -45,13 +45,13 @@ var migrateCmd = &cobra.Command{
 			driver,
 		)
 		if err != nil {
-			log.Fatalln(err)
+			panic(err)
 		}
 
 		if steps != 0 {
-			log.Fatalln(m.Steps(steps))
+			panic(m.Steps(steps))
 		} else {
-			log.Fatalln(m.Steps(steps))
+			panic(m.Steps(steps))
 		}
 	},
 }

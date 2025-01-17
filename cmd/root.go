@@ -32,9 +32,8 @@ func init() {
 
 	rootCmd.PersistentFlags().String("config", ".env", "config file (default is $HOME/.env)")
 
-	rootCmd.PersistentFlags().String("log_level", "warning", "set level of logs that should be written")
-	rootCmd.PersistentFlags().String("log_dir", ".", "set path to the directory where logs should be written")
-	rootCmd.PersistentFlags().String("log_file", "redirector.log", "set file name where logs should be written")
+	//TODO: handle
+	rootCmd.PersistentFlags().String("log_level", "info", "set level of logs that should be written")
 
 	rootCmd.PersistentFlags().String("db_host", "localhost", "storage host")
 	rootCmd.PersistentFlags().String("db_port", "3306", "storage port")
@@ -42,10 +41,16 @@ func init() {
 	rootCmd.PersistentFlags().String("db_password", "secret", "storage password")
 	rootCmd.PersistentFlags().String("db_database", "redirector", "storage database name")
 
+	rootCmd.PersistentFlags().Int("db_conn_max_life", 500, "storage connection max life")
+	rootCmd.PersistentFlags().Int("db_max_idle_conn", 50, "storage max idle connections")
+	rootCmd.PersistentFlags().Int("db_max_open_conn", 50, "storage max open connections")
+
 	rootCmd.PersistentFlags().String("http_server_host", "localhost", "http server host")
 	rootCmd.PersistentFlags().String("http_server_port", "8080", "http server post")
 	rootCmd.PersistentFlags().Bool("http_server_ssl", false, "is ssl enabled")
 	rootCmd.PersistentFlags().String("http_server_cert", "path/cert.pem", "path to ssl certs")
+
+	rootCmd.PersistentFlags().String("geoip2_db_path", "GeoIP2-City.mmdb", "path to GeoIP2 DB file")
 
 	err := viper.BindPFlags(rootCmd.PersistentFlags())
 	if err != nil {

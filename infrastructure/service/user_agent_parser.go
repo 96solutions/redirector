@@ -14,7 +14,7 @@ type UserAgentParser struct {
 	*uaparser.Parser
 }
 
-func NewUserAgentParser() service.UserAgentParser {
+func NewUserAgentParser() service.UserAgentParserInterface {
 	return &UserAgentParser{
 		uaparser.NewFromSaved(),
 	}

@@ -4,6 +4,7 @@ package interactor
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -59,26 +60,23 @@ type RedirectInteractor interface {
 }
 
 type redirectInteractor struct {
-	log                     service.Logger
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
 	ipAddressParser         service.IpAddressParserInterface
-	userAgentParser         service.UserAgentParser
+	userAgentParser         service.UserAgentParserInterface
 	tokenRegExp             *regexp.Regexp
 	clickHandlers           []ClickHandlerInterface
 }
 
 // NewRedirectInteractor function creates RedirectInteractor implementation.
 func NewRedirectInteractor(
-	logger service.Logger,
 	trkRepo repository.TrackingLinksRepositoryInterface,
 	ipAddressParser service.IpAddressParserInterface,
-	userAgentParser service.UserAgentParser,
+	userAgentParser service.UserAgentParserInterface,
 	clickHandlers []ClickHandlerInterface,
 ) RedirectInteractor {
 	compiledRegExp := regexp.MustCompile(`{({)?(\w+)(})?}`)
 
 	return &redirectInteractor{
-		log:                     logger,
 		trackingLinksRepository: trkRepo,
 		ipAddressParser:         ipAddressParser,
 		userAgentParser:         userAgentParser,
@@ -110,7 +108,7 @@ func (r *redirectInteractor) Redirect(
 
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
 	if err != nil {
-		r.log.Errorf("an error occured while parsing ip address (%s). error: %s\n", requestData.IP, err)
+		slog.Error("an error occurred while parsing ip address", "ip", requestData.IP, "error", err)
 	}
 	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
 		//TODO: handle trackingLink.UnsupportedGeoRedirectRules
@@ -119,7 +117,7 @@ func (r *redirectInteractor) Redirect(
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
 	if err != nil {
-		r.log.Errorf("an error occured while parsing user-agent header (%s). error: %s\n", requestData.UserAgent, err)
+		slog.Error("an error occurred while parsing user-agent header", "user-agent", requestData.UserAgent, "error", err)
 	}
 	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
 		//TODO: handle trackingLink.UnsupportedDeviceRedirectRules
@@ -254,6 +252,7 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 		P4: strings.Join(requestData.GetParam("p4"), ","),
 	}
 
+	//TODO: simplify
 	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
 	for _, handler := range r.clickHandlers {
 		outputs = append(outputs, handler.HandleClick(ctx, click))

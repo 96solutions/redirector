@@ -22,3 +22,7 @@ func (g *GeoIP2) Parse(ip net.IP) (string, error) {
 
 	return record.Country.IsoCode, nil
 }
+
+func (g *GeoIP2) Close() error {
+	return g.db.Close()
+}

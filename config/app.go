@@ -3,7 +3,7 @@ package config
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -11,21 +11,22 @@ import (
 )
 
 var lock = &sync.Mutex{}
-var applicationConfig *appConfig
+var applicationConfig *AppConfig
 
-type appConfig struct {
-	DBConf         *dbConf
-	LoggerConf     *loggerConf
-	HttpServerConf *httpServerConf
+type AppConfig struct {
+	DBConf         *DBConf
+	HttpServerConf *HttpServerConf
+
+	GeoIP2DBPath string `mapstructure:"geoip2_db_path"`
 }
 
-func (cfg *appConfig) String() string {
+func (cfg *AppConfig) String() string {
 	cfgJSON, _ := json.MarshalIndent(cfg, "", "    ")
 
 	return string(cfgJSON)
 }
 
-func GetConfig() *appConfig {
+func GetConfig() *AppConfig {
 	if applicationConfig == nil {
 		lock.Lock()
 		defer lock.Unlock()
@@ -37,7 +38,7 @@ func GetConfig() *appConfig {
 	return applicationConfig
 }
 
-func initConfig() *appConfig {
+func initConfig() *AppConfig {
 	// Tell viper the path/location of your env file
 	// viper.AddConfigPath(".")
 
@@ -51,23 +52,22 @@ func initConfig() *appConfig {
 
 	// Viper reads all the variables from env file and log error if any found
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Error reading env file ", err)
+		panic(fmt.Errorf("error reading env file. error: %w", err))
 	}
 
-	cfg := new(appConfig)
-	cfg.HttpServerConf = new(httpServerConf)
-	cfg.DBConf = new(dbConf)
-	cfg.LoggerConf = new(loggerConf)
+	cfg := new(AppConfig)
+	cfg.HttpServerConf = new(HttpServerConf)
+	cfg.DBConf = new(DBConf)
 
-	// Viper unmarshals the loaded env varialbes into the config structs
+	// Viper unmarshal the loaded env variables into the config structs
 	if err := viper.Unmarshal(&cfg.HttpServerConf); err != nil {
-		log.Fatalf("cannot unmarshal HttpServerConf. error: %s", err)
+		panic(fmt.Errorf("cannot unmarshal HttpServerConf. error: %w", err))
 	}
 	if err := viper.Unmarshal(&cfg.DBConf); err != nil {
-		log.Fatalf("cannot unmarshal DBConf. error: %s", err)
+		panic(fmt.Errorf("cannot unmarshal DBConf. error: %s", err))
 	}
-	if err := viper.Unmarshal(&cfg.LoggerConf); err != nil {
-		log.Fatalf("cannot unmarshal LoggerConf. error: %s", err)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		panic(fmt.Errorf("cannot unmarshal GeoIP2DBPath. error: %s", err))
 	}
 
 	// add watcher on init

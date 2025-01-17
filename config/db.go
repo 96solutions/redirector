@@ -1,8 +1,11 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-type dbConf struct {
+type DBConf struct {
 	Host string `mapstructure:"db_host"`
 	Port string `mapstructure:"db_port"`
 
@@ -10,8 +13,16 @@ type dbConf struct {
 	Password string `mapstructure:"db_password"`
 
 	Database string `mapstructure:"db_database"`
+
+	ConnectionMaxLife  int `mapstructure:"db_conn_max_life"`
+	MaxIdleConnections int `mapstructure:"db_max_idle_conn"`
+	MaxOpenConnections int `mapstructure:"db_max_open_conn"`
 }
 
-func (m *dbConf) DSN() string {
+func (m *DBConf) DSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", m.User, m.Password, m.Host, m.Port, m.Database)
+}
+
+func (m *DBConf) ConnectionMaxLifeDuration() time.Duration {
+	return time.Duration(m.ConnectionMaxLife) * time.Second
 }

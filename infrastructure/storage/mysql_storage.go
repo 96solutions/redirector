@@ -3,8 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/lroman242/redirector/domain/entity"
 )
@@ -15,32 +14,27 @@ type MySQLStorage struct {
 	*sql.DB
 }
 
-func NewMySQLStorage(host, port, user, pass, database string) *MySQLStorage {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, pass, host, port, database))
-	if err != nil {
-		panic(err)
-	}
-
+func NewMySQLStorage(dbConnection *sql.DB) *MySQLStorage {
 	return &MySQLStorage{
-		db,
+		dbConnection,
 	}
 }
 
 func (s *MySQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.TrackingLink {
 	stmt, err := s.DB.PrepareContext(ctx, findTrackingLinkBySlugQuery)
 	if err != nil {
-		log.Printf("an error occured while preparing statement, error: %s", err)
+		slog.Error("an error occurred while preparing statement", "error", err)
 		return nil
 	}
 	defer stmt.Close()
 
 	result, err := stmt.QueryContext(ctx, slug)
 	if err != nil {
-		log.Printf("an error occured while executing statement, error: %s", err)
+		slog.Error("an error occurred while executing statement", "error", err)
 		return nil
 	}
 	if result.Err() != nil {
-		log.Printf("an error occured while executing statement, error: %s", err)
+		slog.Error("an error occurred while executing statement", "error", err)
 		return nil
 	}
 
@@ -73,7 +67,7 @@ func (s *MySQLStorage) FindTrackingLink(ctx context.Context, slug string) *entit
 	)
 
 	if err != nil {
-		log.Printf("an error occured while scaning query result, error: %s", err)
+		slog.Error("an error occurred while scanning query result", "error", err)
 		return nil
 	}
 
