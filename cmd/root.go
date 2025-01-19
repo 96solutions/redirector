@@ -30,7 +30,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().String("config", ".env", "config file (default is $HOME/.env)")
+	rootCmd.PersistentFlags().String("config", "", "empty by default. means read from environment")
 
 	rootCmd.PersistentFlags().String("log_level", "info", "set level of logs that should be written")
 	rootCmd.PersistentFlags().Bool("log_is_json", true, "should logs be handled in JSON format?")
@@ -47,7 +47,7 @@ func init() {
 	rootCmd.PersistentFlags().Int("db_max_idle_conn", 50, "storage max idle connections")
 	rootCmd.PersistentFlags().Int("db_max_open_conn", 50, "storage max open connections")
 
-	rootCmd.PersistentFlags().String("http_server_host", "localhost", "http server host")
+	rootCmd.PersistentFlags().String("http_server_host", "", "http server host")
 	rootCmd.PersistentFlags().String("http_server_port", "8080", "http server post")
 	rootCmd.PersistentFlags().Bool("http_server_ssl", false, "is ssl enabled")
 	rootCmd.PersistentFlags().String("http_server_cert", "path/cert.pem", "path to ssl certs")

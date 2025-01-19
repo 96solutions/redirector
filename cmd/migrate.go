@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"github.com/lroman242/redirector/registry"
-
-	_ "github.com/go-sql-driver/mysql"
 	migrate "github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 	"github.com/lroman242/redirector/config"
+	"github.com/lroman242/redirector/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -28,13 +28,14 @@ var migrateCmd = &cobra.Command{
 
 		db := r.NewDB()
 
-		driver, err := mysql.WithInstance(db, &mysql.Config{})
+		driver, err := postgres.WithInstance(db, &postgres.Config{})
 		if err != nil {
 			panic(err)
 		}
+
 		m, err := migrate.NewWithDatabaseInstance(
 			"file://./migrations",
-			"mysql",
+			"postgres",
 			driver,
 		)
 		if err != nil {
@@ -42,9 +43,10 @@ var migrateCmd = &cobra.Command{
 		}
 
 		if steps != 0 {
-			panic(m.Steps(steps))
-		} else {
-			panic(m.Steps(steps))
+			err = m.Steps(steps)
+			if err != nil {
+				panic(err)
+			}
 		}
 	},
 }

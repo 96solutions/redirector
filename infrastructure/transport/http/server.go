@@ -11,8 +11,12 @@ import (
 func NewHandler(interactor interactor.RedirectInteractor) http.Handler {
 	r := mux.NewRouter()
 
+	r.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Redirector!"))
+	}))
 	r.Handle("/metrics", promhttp.Handler())
-	r.Handle("/{slug}", NewRedirectHandler(interactor))
+	r.Handle("/r/{slug}", NewRedirectHandler(interactor))
 
 	return r
 }

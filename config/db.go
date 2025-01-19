@@ -20,7 +20,7 @@ type DBConf struct {
 }
 
 func (m *DBConf) DSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", m.User, m.Password, m.Host, m.Port, m.Database)
+	return fmt.Sprintf("%s:%s@%s:%s/%s", m.User, m.Password, m.Host, m.Port, m.Database)
 }
 
 func (m *DBConf) ConnectionMaxLifeDuration() time.Duration {

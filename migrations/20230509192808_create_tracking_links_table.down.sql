@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS `tracking_links`;
+DROP TABLE IF EXISTS "tracking_links";

@@ -43,17 +43,17 @@ func initConfig() *AppConfig {
 	// Tell viper the path/location of your env file
 	// viper.AddConfigPath(".")
 
-	// Tell viper the name of your file
-	viper.SetConfigFile(viper.Get("config").(string))
-
-	// Tell viper the type of your file
-	viper.SetConfigType("env")
-
 	viper.AutomaticEnv()
 
-	// Viper reads all the variables from env file and log error if any found
-	if err := viper.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("error reading env file. error: %w", err))
+	if viper.Get("config").(string) != "" {
+		// Tell viper the name of your file
+		viper.SetConfigFile(viper.Get("config").(string))
+		// Tell viper the type of your file
+		viper.SetConfigType("env")
+		// Viper reads all the variables from env file and log error if any found
+		if err := viper.ReadInConfig(); err != nil {
+			panic(fmt.Errorf("error reading env file. error: %w", err))
+		}
 	}
 
 	cfg := new(AppConfig)

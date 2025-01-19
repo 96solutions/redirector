@@ -3,38 +3,39 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"github.com/lroman242/redirector/infrastructure/logger"
 	"log/slog"
 
 	"github.com/lroman242/redirector/domain/entity"
 )
 
-const findTrackingLinkBySlugQuery = `select * from tracking_links where slug = ? limit 1`
+const findTrackingLinkBySlugQuery = `SELECT * FROM tracking_links WHERE slug = $1 LIMIT 1`
 
-type MySQLStorage struct {
+type SQLStorage struct {
 	*sql.DB
 }
 
-func NewMySQLStorage(dbConnection *sql.DB) *MySQLStorage {
-	return &MySQLStorage{
+func NewSQLStorage(dbConnection *sql.DB) *SQLStorage {
+	return &SQLStorage{
 		dbConnection,
 	}
 }
 
-func (s *MySQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.TrackingLink {
+func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.TrackingLink {
 	stmt, err := s.DB.PrepareContext(ctx, findTrackingLinkBySlugQuery)
 	if err != nil {
-		slog.Error("an error occurred while preparing statement", "error", err)
+		slog.Error("an error occurred while preparing statement", logger.ErrAttr(err))
 		return nil
 	}
 	defer stmt.Close()
 
 	result, err := stmt.QueryContext(ctx, slug)
 	if err != nil {
-		slog.Error("an error occurred while executing statement", "error", err)
+		slog.Error("an error occurred while executing statement", logger.ErrAttr(err))
 		return nil
 	}
 	if result.Err() != nil {
-		slog.Error("an error occurred while executing statement", "error", err)
+		slog.Error("an error occurred while executing statement", logger.ErrAttr(err))
 		return nil
 	}
 
@@ -67,7 +68,7 @@ func (s *MySQLStorage) FindTrackingLink(ctx context.Context, slug string) *entit
 	)
 
 	if err != nil {
-		slog.Error("an error occurred while scanning query result", "error", err)
+		slog.Error("an error occurred while scanning query result", logger.ErrAttr(err))
 		return nil
 	}
 
