@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/lroman242/redirector/config"
 	"github.com/lroman242/redirector/registry"
 	"github.com/spf13/cobra"
-	"log/slog"
-	"os"
 )
 
 // serveCmd represents the serve command

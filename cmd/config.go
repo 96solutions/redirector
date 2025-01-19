@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/lroman242/redirector/config"
+	"github.com/lroman242/redirector/infrastructure/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -12,10 +11,10 @@ var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Show application configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := fmt.Printf("Application config:\n%s\n", config.GetConfig())
-		if err != nil {
-			panic("Error: " + err.Error())
-		}
+		cfg := config.GetConfig()
+
+		log := logger.NewLogger(cfg.LogConf)
+		log.Info("Application config", "config", cfg)
 	},
 }
 

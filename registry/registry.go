@@ -3,6 +3,7 @@ package registry
 import (
 	"database/sql"
 	"fmt"
+	"github.com/lroman242/redirector/infrastructure/logger"
 	"log/slog"
 
 	"github.com/lroman242/redirector/config"
@@ -20,12 +21,14 @@ import (
 type Registry interface {
 	NewService() interactor.RedirectInteractor
 	NewServer() *server.Server
+	NewDB() *sql.DB
+	NewIPAddressParser() service.IpAddressParserInterface
+	NewUserAgentParser() service.UserAgentParserInterface
+	NewTrackingLinksRepository() repository.TrackingLinksRepositoryInterface
 }
 
 type registry struct {
-	conf               *config.AppConfig
-	redirectInteractor interactor.RedirectInteractor
-	mysql              *sql.DB
+	conf *config.AppConfig
 }
 
 // NewRegistry function initialize new Registry instance.
@@ -34,8 +37,6 @@ func NewRegistry(conf *config.AppConfig) Registry {
 		conf: conf,
 	}
 
-	r.mysql = r.NewDB()
-
 	return r
 }
 
@@ -43,40 +44,38 @@ func NewRegistry(conf *config.AppConfig) Registry {
 func (r *registry) NewService() interactor.RedirectInteractor {
 	clickHandlers := make([]interactor.ClickHandlerInterface, 0)
 
-	r.redirectInteractor = interactor.NewRedirectInteractor(
+	return interactor.NewRedirectInteractor(
 		r.NewTrackingLinksRepository(),
 		r.NewIPAddressParser(),
 		r.NewUserAgentParser(),
 		clickHandlers,
 	)
-
-	return r.redirectInteractor
 }
 
+// NewServer func creates an instance of new Server (HTTP).
 func (r *registry) NewServer() *server.Server {
 	return server.NewServer(r.conf.HttpServerConf, http.NewHandler(r.NewService()))
 }
 
 // NewDB func creates mysql session.
 func (r *registry) NewDB() *sql.DB {
-	if r.mysql != nil {
-		return r.mysql
-	}
-
 	slog.Info("initializing mysql connection ...")
 
-	mysqlSession, err := sql.Open("mysql", r.conf.DBConf.DSN())
+	db, err := sql.Open("mysql", r.conf.DBConf.DSN())
 	if err != nil {
 		panic(fmt.Sprintf("cannot connect to mysql %s", err))
 	}
 
-	mysqlSession.SetConnMaxLifetime(r.conf.DBConf.ConnectionMaxLifeDuration())
-	mysqlSession.SetMaxIdleConns(r.conf.DBConf.MaxIdleConnections)
-	mysqlSession.SetMaxOpenConns(r.conf.DBConf.MaxOpenConnections)
+	err = db.Ping()
+	if err != nil {
+		panic(fmt.Errorf("unsuccessfull ping database. error: %w", err))
+	}
 
-	r.mysql = mysqlSession
+	db.SetConnMaxLifetime(r.conf.DBConf.ConnectionMaxLifeDuration())
+	db.SetMaxIdleConns(r.conf.DBConf.MaxIdleConnections)
+	db.SetMaxOpenConns(r.conf.DBConf.MaxOpenConnections)
 
-	return r.mysql
+	return db
 }
 
 // NewIPAddressParser creates service.IpAddressParserInterface implementation.
@@ -99,4 +98,9 @@ func (r *registry) NewUserAgentParser() service.UserAgentParserInterface {
 // NewTrackingLinksRepository creates repository.TrackingLinksRepositoryInterface implementation.
 func (r *registry) NewTrackingLinksRepository() repository.TrackingLinksRepositoryInterface {
 	return storage.NewMySQLStorage(r.NewDB())
+}
+
+// NewLogger creates pointer to *slog.Logger instance (which might be set as default logger).
+func (r *registry) NewLogger() *slog.Logger {
+	return logger.NewLogger(r.conf.LogConf)
 }

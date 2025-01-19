@@ -32,8 +32,10 @@ func init() {
 
 	rootCmd.PersistentFlags().String("config", ".env", "config file (default is $HOME/.env)")
 
-	//TODO: handle
 	rootCmd.PersistentFlags().String("log_level", "info", "set level of logs that should be written")
+	rootCmd.PersistentFlags().Bool("log_is_json", true, "should logs be handled in JSON format?")
+	rootCmd.PersistentFlags().Bool("log_add_source", true, "should logs contain the source code file/line where a log was created?")
+	rootCmd.PersistentFlags().Bool("log_replace_default", true, "should newly created logger replace the default logger?")
 
 	rootCmd.PersistentFlags().String("db_host", "localhost", "storage host")
 	rootCmd.PersistentFlags().String("db_port", "3306", "storage port")
