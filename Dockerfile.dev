@@ -1,0 +1,28 @@
+FROM golang:1.22.1-bullseye as base
+
+RUN adduser \
+  --disabled-password \
+  --gecos "" \
+  --home "/home/builder" \
+  --shell "/sbin/nologin" \
+  --no-create-home \
+  --uid 65532 \
+  builder
+
+WORKDIR /home/builder
+
+ENV GOPATH=$HOME/go
+ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+ADD . .
+
+VOLUME ["/home/builder"]
+
+RUN go install -mod=mod github.com/githubnemo/CompileDaemon
+RUN go mod vendor
+
+#USER builder
+
+RUN  git config --global --add safe.directory /home/builder
+
+ENTRYPOINT CompileDaemon -polling=true -build="make compiledaemon" -command="/home/builder/bin/redirector serve"

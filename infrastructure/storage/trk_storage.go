@@ -3,13 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"github.com/lroman242/redirector/infrastructure/logger"
 	"log/slog"
 
 	"github.com/lroman242/redirector/domain/entity"
+	"github.com/lroman242/redirector/domain/valueobject"
+	"github.com/lroman242/redirector/infrastructure/logger"
 )
 
-const findTrackingLinkBySlugQuery = `SELECT * FROM tracking_links WHERE slug = $1 LIMIT 1`
+const findTrackingLinkBySlugQuery = `SELECT  slug, active, allowed_protocols, allowed_geos, allowed_devices, campaign_overaged, campaign_overaged_redirect_rules_id, campaign_active, campaign_active_redirect_rules_id, target_url_template, campaign_id, publisher_id, advertiser_id, source_id FROM tracking_links WHERE slug = $1 LIMIT 1`
 
 type SQLStorage struct {
 	*sql.DB
@@ -38,8 +39,12 @@ func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.
 		slog.Error("an error occurred while executing statement", logger.ErrAttr(err))
 		return nil
 	}
+	result.Next()
 
 	trkLink := new(entity.TrackingLink)
+	trkLink.CampaignOverageRedirectRules = new(valueobject.RedirectRules)
+	trkLink.CampaignDisabledRedirectRules = new(valueobject.RedirectRules)
+
 	err = result.Scan(
 		&trkLink.Slug,
 		&trkLink.IsActive,
@@ -48,16 +53,18 @@ func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.
 		&trkLink.AllowedDevices,
 
 		&trkLink.IsCampaignOveraged,
-		&trkLink.CampaignOverageRedirectRules.RedirectType,
-		&trkLink.CampaignOverageRedirectRules.RedirectSlug,
-		&trkLink.CampaignOverageRedirectRules.RedirectURL,
-		&trkLink.CampaignOverageRedirectRules.RedirectSmartSlug,
+		&trkLink.CampaignOveragedRedirectRulesID,
+		//&trkLink.CampaignOverageRedirectRules.RedirectType,
+		//&trkLink.CampaignOverageRedirectRules.RedirectSlug,
+		//&trkLink.CampaignOverageRedirectRules.RedirectURL,
+		//&trkLink.CampaignOverageRedirectRules.RedirectSmartSlug,
 
 		&trkLink.IsCampaignActive,
-		&trkLink.CampaignDisabledRedirectRules.RedirectType,
-		&trkLink.CampaignDisabledRedirectRules.RedirectSlug,
-		&trkLink.CampaignDisabledRedirectRules.RedirectURL,
-		&trkLink.CampaignDisabledRedirectRules.RedirectSmartSlug,
+		&trkLink.CampaignActiveRedirectRulesID,
+		//&trkLink.CampaignDisabledRedirectRules.RedirectType,
+		//&trkLink.CampaignDisabledRedirectRules.RedirectSlug,
+		//&trkLink.CampaignDisabledRedirectRules.RedirectURL,
+		//&trkLink.CampaignDisabledRedirectRules.RedirectSmartSlug,
 
 		&trkLink.TargetURLTemplate,
 

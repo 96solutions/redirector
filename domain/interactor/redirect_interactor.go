@@ -102,7 +102,7 @@ func (r *redirectInteractor) Redirect(
 		return nil, TrackingLinkDisabledError
 	}
 
-	if len(trackingLink.AllowedProtocols) > 0 && !contains(requestData.Protocol, trackingLink.AllowedProtocols) {
+	if len(trackingLink.AllowedProtocols) > 0 && !trackingLink.AllowedProtocols[requestData.Protocol] {
 		return nil, UnsupportedProtocolError
 	}
 
@@ -110,7 +110,7 @@ func (r *redirectInteractor) Redirect(
 	if err != nil {
 		slog.Error("an error occurred while parsing ip address", "ip", requestData.IP, "error", err)
 	}
-	if len(trackingLink.AllowedGeos) > 0 && !contains(countryCode, trackingLink.AllowedGeos) {
+	if len(trackingLink.AllowedGeos) > 0 && !trackingLink.AllowedGeos[countryCode] {
 		//TODO: handle trackingLink.UnsupportedGeoRedirectRules
 		return nil, UnsupportedGeoError
 	}
@@ -119,7 +119,7 @@ func (r *redirectInteractor) Redirect(
 	if err != nil {
 		slog.Error("an error occurred while parsing user-agent header", "user-agent", requestData.UserAgent, "error", err)
 	}
-	if len(trackingLink.AllowedDevices) > 0 && !contains(ua.Device, trackingLink.AllowedDevices) {
+	if len(trackingLink.AllowedDevices) > 0 && !trackingLink.AllowedDevices[ua.Device] {
 		//TODO: handle trackingLink.UnsupportedDeviceRedirectRules
 		return nil, UnsupportedDeviceError
 	}

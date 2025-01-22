@@ -9,6 +9,7 @@ import (
 	"github.com/lroman242/redirector/config"
 	"github.com/lroman242/redirector/registry"
 	"github.com/spf13/cobra"
+	"log/slog"
 )
 
 var steps int
@@ -47,6 +48,7 @@ var migrateCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
+			slog.Info("Migrations applied successfully")
 		}
 	},
 }

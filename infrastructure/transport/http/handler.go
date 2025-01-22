@@ -1,12 +1,13 @@
 package http
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/lroman242/redirector/domain/dto"
-	"github.com/lroman242/redirector/domain/interactor"
 	"log/slog"
 	"net"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/lroman242/redirector/domain/dto"
+	"github.com/lroman242/redirector/domain/interactor"
 )
 
 type RedirectHandler struct {
@@ -47,6 +48,7 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	slug := vars["slug"]
 
+	slog.Debug("redirect request", slog.String("slug", slug), "data", data)
 	redirectResult, err := rh.interactor.Redirect(r.Context(), slug, data)
 	if err != nil {
 		slog.Error(err.Error(), "slug", slug, "request", data)
@@ -55,8 +57,11 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Debug("redirect result", slog.String("slug", slug), "data", data, "redirectResult", redirectResult)
+
 	http.Redirect(w, r, redirectResult.TargetURL, http.StatusSeeOther)
 
+	//TODO: debug / fix
 	go func() {
 		for {
 			select {
