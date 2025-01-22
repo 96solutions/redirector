@@ -15,10 +15,6 @@ build:
 	@echo ">>> go build -o $(TARGET)"
 	@go mod vendor && CGO_ENABLED=0 GOOS=linux go build -a -o $(TARGET) .
 
-#.PHONY: dockerbuild
-#dockerbuild:
-#	@docker run --name redirector_builder_c --rm --interactive --tty --volume $(CURRENT_DIR):/src redirector_builder make build
-
 clean:
 	rm -rf $(TARGET)
 
@@ -37,3 +33,22 @@ install:
 
 #install:
 # 	curl -L https://github.com/golang-migrate/migrate/releases/download/$version/migrate.$os-$arch.tar.gz | tar xvz
+
+.PHONY: compile
+compile:
+	@ls -la
+	@echo ">>> GIT fix"
+	@git config --global --add safe.directory /usr/src/app
+	@rm -rf vendor
+	@echo ">>> Current commit hash $(REVISION)"
+	@echo ">>> go build -o $(TARGET)"
+	@make clean
+	@go mod vendor && CGO_ENABLED=0 GOOS=linux go build -a -o $(TARGET) .
+	@mkdir -p $(INSTALL_DIR)
+	@mv $(TARGET) $(INSTALL_DIR)
+	@make rmlink && make mklink
+
+#TODO: use builder user instead of root
+.PHONY: dockercompile
+dockercompile:
+	@docker run --name redirector_builder --rm --interactive --tty --volume $(CURRENT_DIR):/usr/src/app -w /usr/src/app golang:1.23 make compile
