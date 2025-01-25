@@ -250,9 +250,10 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 		P2: strings.Join(requestData.GetParam("p2"), ","),
 		P3: strings.Join(requestData.GetParam("p3"), ","),
 		P4: strings.Join(requestData.GetParam("p4"), ","),
+
+		//TODO: add more params...
 	}
 
-	//TODO: simplify
 	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
 	for _, handler := range r.clickHandlers {
 		outputs = append(outputs, handler.HandleClick(ctx, click))

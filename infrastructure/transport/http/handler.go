@@ -61,19 +61,20 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, redirectResult.TargetURL, http.StatusSeeOther)
 
-	//TODO: debug / fix
 	go func() {
 		for {
 			select {
 			case <-r.Context().Done():
 				break
 			case result, cl := <-redirectResult.OutputCh:
-				if cl {
-					break
+				slog.Debug("redirect result", slog.String("slug", slug), "result", result, slog.Bool("isClosed", !cl))
+				if !cl {
+					slog.Debug("click processing result channel closed", slog.String("slug", slug))
+					return
 				}
 
 				if result.Err != nil {
-					slog.Error(result.Err.Error(), "slug", slug, "request", data)
+					slog.Error(result.Err.Error(), slog.String("slug", slug), "request", data)
 				}
 				break
 			default:

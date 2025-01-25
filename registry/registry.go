@@ -33,9 +33,13 @@ type registry struct {
 
 // NewRegistry function initialize new Registry instance.
 func NewRegistry(conf *config.AppConfig) Registry {
+	slog.Info("Initializing Registry ...", "config", conf)
+
 	r := &registry{
 		conf: conf,
 	}
+
+	r.NewLogger()
 
 	return r
 }

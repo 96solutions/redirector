@@ -12,7 +12,7 @@ func NewHandler(interactor interactor.RedirectInteractor) http.Handler {
 
 	r.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Redirector12!"))
+		w.Write([]byte("Redirector"))
 	}))
 
 	r.Handle("/r/{slug}", NewRedirectHandler(interactor))
