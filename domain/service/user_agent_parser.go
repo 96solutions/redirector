@@ -1,3 +1,4 @@
+// Package service contains types which provide some specific functionality used for business logic.
 package service
 
 import (

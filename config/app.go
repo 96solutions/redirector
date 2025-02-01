@@ -15,7 +15,7 @@ var applicationConfig *AppConfig
 
 type AppConfig struct {
 	DBConf         *DBConf
-	HttpServerConf *HttpServerConf
+	HTTPServerConf *HTTPServerConf
 	LogConf        *LoggerConf
 
 	GeoIP2DBPath string `mapstructure:"geoip2_db_path"`
@@ -57,22 +57,22 @@ func initConfig() *AppConfig {
 	}
 
 	cfg := new(AppConfig)
-	cfg.HttpServerConf = new(HttpServerConf)
+	cfg.HTTPServerConf = new(HTTPServerConf)
 	cfg.DBConf = new(DBConf)
 	cfg.LogConf = new(LoggerConf)
 
 	// Viper unmarshal the loaded env variables into the config structs
-	if err := viper.Unmarshal(&cfg.HttpServerConf); err != nil {
+	if err := viper.Unmarshal(&cfg.HTTPServerConf); err != nil {
 		panic(fmt.Errorf("cannot unmarshal HttpServerConf. error: %w", err))
 	}
 	if err := viper.Unmarshal(&cfg.DBConf); err != nil {
-		panic(fmt.Errorf("cannot unmarshal DBConf. error: %s", err))
+		panic(fmt.Errorf("cannot unmarshal DBConf. error: %w", err))
 	}
 	if err := viper.Unmarshal(&cfg.LogConf); err != nil {
-		panic(fmt.Errorf("cannot unmarshal LogConf. error: %s", err))
+		panic(fmt.Errorf("cannot unmarshal LogConf. error: %w", err))
 	}
 	if err := viper.Unmarshal(&cfg); err != nil {
-		panic(fmt.Errorf("cannot unmarshal GeoIP2DBPath. error: %s", err))
+		panic(fmt.Errorf("cannot unmarshal GeoIP2DBPath. error: %w", err))
 	}
 
 	// add watcher on init

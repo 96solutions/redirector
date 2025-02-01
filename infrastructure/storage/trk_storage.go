@@ -10,7 +10,13 @@ import (
 	"github.com/lroman242/redirector/infrastructure/logger"
 )
 
-const findTrackingLinkBySlugQuery = `SELECT  slug, active, allowed_protocols, allowed_geos, allowed_devices, campaign_overaged, campaign_overaged_redirect_rules_id, campaign_active, campaign_active_redirect_rules_id, target_url_template, campaign_id, publisher_id, advertiser_id, source_id FROM tracking_links WHERE slug = $1 LIMIT 1`
+const findTrackingLinkBySlugQuery = `SELECT
+    slug, active, allowed_protocols, allowed_geos, allowed_devices, campaign_overaged,
+    campaign_overaged_redirect_rules_id, campaign_active, campaign_active_redirect_rules_id,
+    target_url_template, campaign_id, publisher_id, advertiser_id, source_id
+FROM tracking_links
+WHERE slug = $1
+LIMIT 1`
 
 type SQLStorage struct {
 	*sql.DB
@@ -54,17 +60,17 @@ func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.
 
 		&trkLink.IsCampaignOveraged,
 		&trkLink.CampaignOveragedRedirectRulesID,
-		//&trkLink.CampaignOverageRedirectRules.RedirectType,
-		//&trkLink.CampaignOverageRedirectRules.RedirectSlug,
-		//&trkLink.CampaignOverageRedirectRules.RedirectURL,
-		//&trkLink.CampaignOverageRedirectRules.RedirectSmartSlug,
+		// &trkLink.CampaignOverageRedirectRules.RedirectType,
+		// &trkLink.CampaignOverageRedirectRules.RedirectSlug,
+		// &trkLink.CampaignOverageRedirectRules.RedirectURL,
+		// &trkLink.CampaignOverageRedirectRules.RedirectSmartSlug,
 
 		&trkLink.IsCampaignActive,
 		&trkLink.CampaignActiveRedirectRulesID,
-		//&trkLink.CampaignDisabledRedirectRules.RedirectType,
-		//&trkLink.CampaignDisabledRedirectRules.RedirectSlug,
-		//&trkLink.CampaignDisabledRedirectRules.RedirectURL,
-		//&trkLink.CampaignDisabledRedirectRules.RedirectSmartSlug,
+		// &trkLink.CampaignDisabledRedirectRules.RedirectType,
+		// &trkLink.CampaignDisabledRedirectRules.RedirectSlug,
+		// &trkLink.CampaignDisabledRedirectRules.RedirectURL,
+		// &trkLink.CampaignDisabledRedirectRules.RedirectSmartSlug,
 
 		&trkLink.TargetURLTemplate,
 

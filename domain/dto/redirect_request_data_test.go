@@ -1,9 +1,10 @@
 package dto_test
 
 import (
-	"github.com/lroman242/redirector/domain/dto"
 	"strings"
 	"testing"
+
+	"github.com/lroman242/redirector/domain/dto"
 )
 
 func TestRedirectRequestData_GetParam(t *testing.T) {

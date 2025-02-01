@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// HttpServerConf describe HTTP Server configuration.
-type HttpServerConf struct {
+// HTTPServerConf describe HTTP Server configuration.
+type HTTPServerConf struct {
 	Host              string `mapstructure:"http_server_host"`
 	Port              int    `mapstructure:"http_server_port"`
 	ReadTimeout       int    `mapstructure:"http_server_read_timeout"`
@@ -17,21 +17,21 @@ type HttpServerConf struct {
 }
 
 // GetHTTPReadTimeout return server read timeout configuration value.
-func (c *HttpServerConf) GetHTTPReadTimeout() time.Duration {
+func (c *HTTPServerConf) GetHTTPReadTimeout() time.Duration {
 	return time.Duration(c.ReadTimeout) * time.Second
 }
 
 // GetHTTPWriteTimeout return server write timeout configuration value.
-func (c *HttpServerConf) GetHTTPWriteTimeout() time.Duration {
+func (c *HTTPServerConf) GetHTTPWriteTimeout() time.Duration {
 	return time.Duration(c.WriteTimeout) * time.Second
 }
 
 // GetHTTPAddress return server host string.
-func (c *HttpServerConf) GetHTTPAddress() string {
+func (c *HTTPServerConf) GetHTTPAddress() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
 // GetShutdownTimeout return server shutdown timeout configuration value.
-func (c *HttpServerConf) GetShutdownTimeout() time.Duration {
+func (c *HTTPServerConf) GetShutdownTimeout() time.Duration {
 	return time.Duration(c.ShutdownTimeout) * time.Second
 }

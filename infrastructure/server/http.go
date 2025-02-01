@@ -20,12 +20,12 @@ var ErrHTTPAddressIsNotSet = errors.New("HTTP Address is not set")
 
 // Server type describe http server instance.
 type Server struct {
-	config     *config.HttpServerConf
+	config     *config.HTTPServerConf
 	httpServer *http.Server
 }
 
 // NewServer create new instance of Server.
-func NewServer(conf *config.HttpServerConf, handler http.Handler) *Server {
+func NewServer(conf *config.HTTPServerConf, handler http.Handler) *Server {
 	s := &Server{
 		config: conf,
 		httpServer: &http.Server{
@@ -80,13 +80,13 @@ func (s *Server) stop() {
 			_ = s.httpServer.Shutdown(context.Background())
 		}()
 
-		////TODO: close other services
-		//wg.Add(1)
-		//go func() {
+		//// TODO: close other services
+		// wg.Add(1)
+		// go func() {
 		//	defer wg.Done()
 		//
-		//	//TODO:
-		//}()
+		//	// TODO:
+		// }()
 
 		wg.Wait()
 

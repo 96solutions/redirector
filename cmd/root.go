@@ -1,20 +1,23 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/lroman242/redirector/config"
+	"github.com/lroman242/redirector/infrastructure/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// rootCmd represents the root command
+// rootCmd represents the root command.
 var rootCmd = &cobra.Command{
 	Use:   "redirector",
 	Short: "Redirector is a simple application to handle HTTP redirects",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("root called")
+	Run: func(_ *cobra.Command, args []string) {
+		cfg := config.GetConfig()
+
+		log := logger.NewLogger(cfg.LogConf)
+		log.Info("Hello ...")
 	},
 }
 
@@ -34,8 +37,16 @@ func init() {
 
 	rootCmd.PersistentFlags().String("log_level", "info", "set level of logs that should be written")
 	rootCmd.PersistentFlags().Bool("log_is_json", true, "should logs be handled in JSON format?")
-	rootCmd.PersistentFlags().Bool("log_add_source", true, "should logs contain the source code file/line where a log was created?")
-	rootCmd.PersistentFlags().Bool("log_replace_default", true, "should newly created logger replace the default logger?")
+	rootCmd.PersistentFlags().Bool(
+		"log_add_source",
+		true,
+		"should logs contain the source code file/line where a log was created?",
+	)
+	rootCmd.PersistentFlags().Bool(
+		"log_replace_default",
+		true,
+		"should newly created logger replace the default logger?",
+	)
 
 	rootCmd.PersistentFlags().String("db_host", "localhost", "storage host")
 	rootCmd.PersistentFlags().String("db_port", "3306", "storage port")

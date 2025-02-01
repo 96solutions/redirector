@@ -12,6 +12,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/ua-parser/uap-go v0.0.0-20211112212520-00c877edfe0f
+	go.uber.org/mock v0.5.0
 )
 
 require (

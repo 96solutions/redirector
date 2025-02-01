@@ -8,23 +8,26 @@ import (
 	"github.com/ua-parser/uap-go/uaparser"
 )
 
-var EmptyUserAgentError = errors.New("provided empty user agent")
+var ErrEmptyUserAgent = errors.New("provided empty user agent")
 
+// UserAgentParser implements service.UserAgentParserInterface.
 type UserAgentParser struct {
 	*uaparser.Parser
 }
 
+// NewUserAgentParser func creates new instance of UserAgentParser.
 func NewUserAgentParser() service.UserAgentParserInterface {
 	return &UserAgentParser{
 		uaparser.NewFromSaved(),
 	}
 }
 
+// Parse function parses data about used device from User-Agent header.
 func (p *UserAgentParser) Parse(userAgent string) (*valueobject.UserAgent, error) {
 	ua := new(valueobject.UserAgent)
 
 	if len(userAgent) == 0 {
-		return ua, EmptyUserAgentError
+		return ua, ErrEmptyUserAgent
 	}
 
 	client := p.Parser.Parse(userAgent)

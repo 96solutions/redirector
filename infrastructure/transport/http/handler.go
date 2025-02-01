@@ -52,7 +52,7 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	redirectResult, err := rh.interactor.Redirect(r.Context(), slug, data)
 	if err != nil {
 		slog.Error(err.Error(), "slug", slug, "request", data)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -81,6 +81,4 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-
-	return
 }

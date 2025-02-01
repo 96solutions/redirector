@@ -1,9 +1,11 @@
+// Package entity contains files which describe business objects.
 package entity
 
 import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+
 	"github.com/lroman242/redirector/domain/valueobject"
 )
 

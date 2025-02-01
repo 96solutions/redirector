@@ -9,5 +9,5 @@ type UserAgent struct {
 	Device   string
 	Platform string
 	Browser  string
-	//Version  string
+	// Version  string
 }

@@ -1,3 +1,4 @@
+// Package entity contains files which describe business objects.
 package entity
 
 import (

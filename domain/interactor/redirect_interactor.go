@@ -54,14 +54,15 @@ const (
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
 
-// RedirectInteractor interface describes the service to handle requests and return the following target URL to redirect to.
+// RedirectInteractor interface describes the service to handle requests
+// and return the following target URL to redirect to.
 type RedirectInteractor interface {
 	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error)
 }
 
 type redirectInteractor struct {
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
-	ipAddressParser         service.IpAddressParserInterface
+	ipAddressParser         service.IPAddressParserInterface
 	userAgentParser         service.UserAgentParserInterface
 	tokenRegExp             *regexp.Regexp
 	clickHandlers           []ClickHandlerInterface
@@ -70,7 +71,7 @@ type redirectInteractor struct {
 // NewRedirectInteractor function creates RedirectInteractor implementation.
 func NewRedirectInteractor(
 	trkRepo repository.TrackingLinksRepositoryInterface,
-	ipAddressParser service.IpAddressParserInterface,
+	ipAddressParser service.IPAddressParserInterface,
 	userAgentParser service.UserAgentParserInterface,
 	clickHandlers []ClickHandlerInterface,
 ) RedirectInteractor {
@@ -126,15 +127,29 @@ func (r *redirectInteractor) Redirect(
 	//TODO: check OS + handle trackingLink.UnsupportedOSRedirectRules
 
 	if trackingLink.IsCampaignOveraged {
-		return r.handleRedirectRules(trackingLink.CampaignOverageRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
+		return r.handleRedirectRules(
+			trackingLink.CampaignOverageRedirectRules,
+			ctx,
+			requestData,
+			trackingLink,
+			ua,
+			countryCode,
+		)
 	}
 
 	if !trackingLink.IsCampaignActive {
-		return r.handleRedirectRules(trackingLink.CampaignDisabledRedirectRules, ctx, requestData, trackingLink, ua, countryCode)
+		return r.handleRedirectRules(
+			trackingLink.CampaignDisabledRedirectRules,
+			ctx,
+			requestData,
+			trackingLink,
+			ua,
+			countryCode,
+		)
 	}
 
-	//TODO: prepare target URL template!
-	//if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
+	// TODO: prepare target URL template!
+	// if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
 	//	//TODO: handle deeplink
 	//}
 
@@ -255,15 +270,15 @@ func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string
 	}
 
 	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
-	for _, handler := range r.clickHandlers {
-		outputs = append(outputs, handler.HandleClick(ctx, click))
+	for i, handler := range r.clickHandlers {
+		outputs[i] = handler.HandleClick(ctx, click)
 	}
 
-	return merge(outputs...)
+	return merge(outputs)
 }
 
 // merge function will fan-in the results received from ClickHandlerInterface(s).
-func merge(clkProcessingResultChans ...<-chan *dto.ClickProcessingResult) <-chan *dto.ClickProcessingResult {
+func merge(clkProcessingResultChans []<-chan *dto.ClickProcessingResult) <-chan *dto.ClickProcessingResult {
 	var wg sync.WaitGroup
 	out := make(chan *dto.ClickProcessingResult)
 
@@ -300,7 +315,7 @@ func contains(needle string, haystack []string) bool {
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-// randString function generates random string of n-length
+// randString function generates random string of n-length.
 func randString(n int) string {
 	b := make([]byte, n)
 	for i := range b {

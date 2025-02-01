@@ -10,7 +10,7 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Show application configuration",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		cfg := config.GetConfig()
 
 		log := logger.NewLogger(cfg.LogConf)

@@ -1,3 +1,4 @@
+// Package interactor contains all use-case interactors preformed by the application.
 package interactor
 
 import (
@@ -27,7 +28,8 @@ type storeClickHandler struct {
 	repo repository.ClicksRepository
 }
 
-// NewStoreClickHandler function creates implementation of ClickHandlerInterface which saves entity.Click to the storage using repository.ClicksRepository.
+// NewStoreClickHandler function creates implementation of ClickHandlerInterface
+// which saves entity.Click to the storage using repository.ClicksRepository.
 func NewStoreClickHandler(clkRepository repository.ClicksRepository) ClickHandlerInterface {
 	return &storeClickHandler{repo: clkRepository}
 }

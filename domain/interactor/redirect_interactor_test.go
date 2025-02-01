@@ -20,30 +20,28 @@ import (
 
 func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...interactor.ClickHandlerInterface) (
 	interactor.RedirectInteractor,
-	*mocks.MockLogger,
 	*mocks.MockTrackingLinksRepositoryInterface,
-	*mocks.MockIpAddressParserInterface,
+	*mocks.MockIPAddressParserInterface,
 	*mocks.MockUserAgentParser,
 ) {
 	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
-	ipAddressParser := mocks.NewMockIpAddressParserInterface(ctrl)
+	ipAddressParser := mocks.NewMockIPAddressParserInterface(ctrl)
 	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
-	logger := mocks.NewMockLogger(ctrl)
 
-	srv := interactor.NewRedirectInteractor(logger, trkRepo, ipAddressParser, userAgentParser, handlers)
+	srv := interactor.NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, handlers)
 
-	return srv, logger, trkRepo, ipAddressParser, userAgentParser
+	return srv, trkRepo, ipAddressParser, userAgentParser
 }
 
 func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
+	srv, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -65,11 +63,11 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
+	srv, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -79,7 +77,7 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	trkLink := &entity.TrackingLink{
 		IsActive:         false,
 		Slug:             expectedSlug,
-		AllowedProtocols: []string{"https"},
+		AllowedProtocols: map[string]bool{"https": true},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
@@ -97,11 +95,11 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, _, trkRepo, _, _ := makeRedirectInteractor(ctrl)
+	srv, trkRepo, _, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -111,7 +109,7 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	trkLink := &entity.TrackingLink{
 		IsActive:         true,
 		Slug:             expectedSlug,
-		AllowedProtocols: []string{"https"},
+		AllowedProtocols: map[string]bool{"https": true},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
@@ -129,11 +127,11 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, _, trkRepo, ipAddressParser, _ := makeRedirectInteractor(ctrl)
+	srv, trkRepo, ipAddressParser, _ := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -143,8 +141,8 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	trkLink := &entity.TrackingLink{
 		IsActive:         true,
 		Slug:             expectedSlug,
-		AllowedProtocols: []string{},
-		AllowedGeos:      []string{"US", "PT", "UA"},
+		AllowedProtocols: map[string]bool{},
+		AllowedGeos:      map[string]bool{"US": true, "PT": true, "UA": true},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
@@ -163,11 +161,11 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -177,9 +175,9 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	trkLink := &entity.TrackingLink{
 		IsActive:         true,
 		Slug:             expectedSlug,
-		AllowedProtocols: []string{},
-		AllowedGeos:      []string{"US", "PT", "UA", "PL"},
-		AllowedDevices:   []string{"Desktop"},
+		AllowedProtocols: map[string]bool{},
+		AllowedGeos:      map[string]bool{"US": true, "PT": true, "UA": true, "PL": true},
+		AllowedDevices:   map[string]bool{"Desktop": true},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
@@ -205,12 +203,13 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
+	clkHandler := interactor.NewStoreClickHandler(clkRepo)
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, clkHandler)
 
 	expectedDto := &dto.RedirectRequestData{
 		RequestID: "someUniqueRequestID",
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -232,9 +231,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.LinkRedirectType,
@@ -251,9 +250,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.SlugRedirectType,
@@ -270,9 +269,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.SmartSlugRedirectType,
@@ -289,9 +288,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      valueobject.NoRedirectType,
@@ -308,9 +307,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: true,
 				CampaignOverageRedirectRules: &valueobject.RedirectRules{
 					RedirectType:      "invalid_redirect_type",
@@ -387,9 +386,9 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 						return &entity.TrackingLink{
 							IsActive:           true,
 							Slug:               expectedSlug,
-							AllowedProtocols:   []string{},
-							AllowedGeos:        []string{},
-							AllowedDevices:     []string{},
+							AllowedProtocols:   map[string]bool{},
+							AllowedGeos:        map[string]bool{},
+							AllowedDevices:     map[string]bool{},
 							IsCampaignOveraged: false,
 							IsCampaignActive:   true,
 							TargetURLTemplate:  expectedTargetURL,
@@ -426,11 +425,11 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -452,9 +451,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: false,
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
@@ -472,9 +471,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: false,
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
@@ -492,9 +491,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: false,
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
@@ -512,9 +511,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: false,
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
@@ -532,9 +531,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 			trkLink: &entity.TrackingLink{
 				IsActive:           true,
 				Slug:               expectedSlug,
-				AllowedProtocols:   []string{},
-				AllowedGeos:        []string{},
-				AllowedDevices:     []string{},
+				AllowedProtocols:   map[string]bool{},
+				AllowedGeos:        map[string]bool{},
+				AllowedDevices:     map[string]bool{},
 				IsCampaignOveraged: false,
 				IsCampaignActive:   false,
 				CampaignDisabledRedirectRules: &valueobject.RedirectRules{
@@ -611,9 +610,9 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 						return &entity.TrackingLink{
 							IsActive:           true,
 							Slug:               expectedSlug,
-							AllowedProtocols:   []string{},
-							AllowedGeos:        []string{},
-							AllowedDevices:     []string{},
+							AllowedProtocols:   map[string]bool{},
+							AllowedGeos:        map[string]bool{},
+							AllowedDevices:     map[string]bool{},
 							IsCampaignOveraged: false,
 							IsCampaignActive:   true,
 							TargetURLTemplate:  expectedTargetURL,
@@ -650,11 +649,11 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	defer ctrl.Finish()
 
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
-	srv, _, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -665,9 +664,9 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	expectedTrkLink := entity.TrackingLink{
 		IsActive:           true,
 		Slug:               expectedSlug,
-		AllowedProtocols:   []string{},
-		AllowedGeos:        []string{},
-		AllowedDevices:     []string{},
+		AllowedProtocols:   map[string]bool{},
+		AllowedGeos:        map[string]bool{},
+		AllowedDevices:     map[string]bool{},
 		IsCampaignOveraged: false,
 		IsCampaignActive:   true,
 		TargetURLTemplate:  "http://target.url/path",
@@ -870,11 +869,11 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, logger, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
-		Headers:   make(map[string]string),
+		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
@@ -885,9 +884,9 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 	expectedTrkLink := entity.TrackingLink{
 		IsActive:           true,
 		Slug:               expectedSlug,
-		AllowedProtocols:   []string{},
-		AllowedGeos:        []string{},
-		AllowedDevices:     []string{},
+		AllowedProtocols:   map[string]bool{},
+		AllowedGeos:        map[string]bool{},
+		AllowedDevices:     map[string]bool{},
 		IsCampaignOveraged: false,
 		IsCampaignActive:   true,
 		TargetURLTemplate:  "http://target.url/path",
@@ -906,8 +905,6 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(&expectedTrkLink)
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return(expectedCountry, expectedIPAddressParseError)
 	userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(expectedUserAgent, expectedUserAgentParseError)
-	logger.EXPECT().Errorf(gomock.Any(), expectedDto.IP, expectedIPAddressParseError)
-	logger.EXPECT().Errorf(gomock.Any(), expectedDto.UserAgent, expectedUserAgentParseError)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if err != nil {

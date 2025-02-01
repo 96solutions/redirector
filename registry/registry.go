@@ -22,7 +22,7 @@ type Registry interface {
 	NewService() interactor.RedirectInteractor
 	NewServer() *server.Server
 	NewDB() *sql.DB
-	NewIPAddressParser() service.IpAddressParserInterface
+	NewIPAddressParser() service.IPAddressParserInterface
 	NewUserAgentParser() service.UserAgentParserInterface
 	NewTrackingLinksRepository() repository.TrackingLinksRepositoryInterface
 }
@@ -60,7 +60,7 @@ func (r *registry) NewService() interactor.RedirectInteractor {
 // NewServer func creates an instance of new Server (HTTP).
 func (r *registry) NewServer() *server.Server {
 	slog.Info("initializing Server....")
-	return server.NewServer(r.conf.HttpServerConf, http.NewHandler(r.NewService()))
+	return server.NewServer(r.conf.HTTPServerConf, http.NewHandler(r.NewService()))
 }
 
 // NewDB func creates mysql session.
@@ -87,8 +87,8 @@ func (r *registry) NewDB() *sql.DB {
 	return db
 }
 
-// NewIPAddressParser creates service.IpAddressParserInterface implementation.
-func (r *registry) NewIPAddressParser() service.IpAddressParserInterface {
+// NewIPAddressParser creates service.IPAddressParserInterface implementation.
+func (r *registry) NewIPAddressParser() service.IPAddressParserInterface {
 	slog.Info("initializing geoip2 db", "path", r.conf.GeoIP2DBPath)
 	db, err := geoip2.Open(r.conf.GeoIP2DBPath)
 
