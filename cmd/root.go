@@ -48,6 +48,12 @@ func init() {
 		"should newly created logger replace the default logger?",
 	)
 
+	rootCmd.PersistentFlags().String("log_open_search_host", "localhost", "OpenSearch node host")
+	rootCmd.PersistentFlags().String("log_open_search_port", "9200", "OpenSearch node port")
+	rootCmd.PersistentFlags().String("log_open_search_index", "redirector", "OpenSearch index name")
+	rootCmd.PersistentFlags().String("log_open_search_user", "logger", "OpenSearch user (auth)")
+	rootCmd.PersistentFlags().String("log_open_search_pass", "", "OpenSearch password (auth)")
+
 	rootCmd.PersistentFlags().String("db_host", "localhost", "storage host")
 	rootCmd.PersistentFlags().String("db_port", "3306", "storage port")
 	rootCmd.PersistentFlags().String("db_username", "root", "storage username")

@@ -11,12 +11,19 @@ import (
 
 // NewLogger creates a new slog.Logger instance.
 func NewLogger(conf *config.LoggerConf) *slog.Logger {
-	// write to stdout by default
 	//TODO: add ability to provide writer
+
+	// write to stdout by default
 	var w io.Writer = os.Stdout
 
+	// write to OpenSearch.
+	w, err := NewOpenSearchWriter(conf.OpenSearchHost, conf.OpenSearchPort, conf.OpenSearchIndex, conf.OpenSearchUser, conf.OpenSearchPass)
+	if err != nil {
+		panic(err)
+	}
+
 	var l slog.Level
-	if err := l.UnmarshalText([]byte(conf.Level)); err != nil {
+	if err = l.UnmarshalText([]byte(conf.Level)); err != nil {
 		l = slog.LevelInfo
 	}
 

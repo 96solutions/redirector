@@ -8,6 +8,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.10.9
+	github.com/opensearch-project/opensearch-go v1.1.0
 	github.com/oschwald/geoip2-golang v1.8.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
