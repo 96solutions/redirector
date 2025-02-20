@@ -17,16 +17,24 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-// Registry interface describe struct which should build main application parts.
+// Registry provides factory methods for creating the main application components.
+// It handles dependency injection and ensures proper initialization of services.
 type Registry interface {
+	// NewService creates a new RedirectInteractor instance
 	NewService() interactor.RedirectInteractor
+	// NewServer creates and configures the HTTP server
 	NewServer() *server.Server
+	// NewDB initializes the database connection
 	NewDB() *sql.DB
+	// NewIPAddressParser creates a service for parsing IP addresses
 	NewIPAddressParser() service.IPAddressParserInterface
+	// NewUserAgentParser creates a service for parsing User-Agent strings
 	NewUserAgentParser() service.UserAgentParserInterface
+	// NewTrackingLinksRepository creates a repository for managing tracking links
 	NewTrackingLinksRepository() repository.TrackingLinksRepositoryInterface
 }
 
+// registry implements Registry interface and manages application component initialization
 type registry struct {
 	conf *config.AppConfig
 }

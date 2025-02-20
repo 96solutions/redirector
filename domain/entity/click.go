@@ -8,13 +8,21 @@ import (
 	"github.com/lroman242/redirector/domain/valueobject"
 )
 
-// Click type describes scope of data retrieved during redirect request via tracking link.
+// Click represents a tracking event generated when a redirect occurs.
+// It stores information about the redirect request including user data,
+// campaign information, and tracking parameters.
 type Click struct {
-	ID         string
-	TargetURL  string
-	Referer    string
-	TrkURL     string
-	Slug       string
+	// ID uniquely identifies this click event
+	ID string
+	// TargetURL is the final URL where user was redirected
+	TargetURL string
+	// Referer contains the referring URL
+	Referer string
+	// TrkURL is the tracking URL that was accessed
+	TrkURL string
+	// Slug identifies the tracking link used
+	Slug string
+	// ParentSlug identifies the parent tracking link if this was a chained redirect
 	ParentSlug string
 
 	TRKLink      *TrackingLink

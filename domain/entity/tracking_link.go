@@ -9,20 +9,30 @@ import (
 	"github.com/lroman242/redirector/domain/valueobject"
 )
 
-// TrackingLink type describes set of rules and requirements that should be used for handling redirect request.
+// TrackingLink defines the rules and configuration for handling redirect requests.
+// It includes validation rules for protocols, geos, and devices, as well as
+// redirect rules for different campaign states (overaged, disabled, etc).
 type TrackingLink struct {
+	// Slug uniquely identifies this tracking link
 	Slug string
 
+	// IsActive indicates if this tracking link is enabled
 	IsActive bool
 
-	AllowedProtocols                AllowedListType
-	CampaignProtocolRedirectRulesID int32
-	CampaignProtocolRedirectRules   *valueobject.RedirectRules
+	// AllowedProtocols defines which protocols (http/https) are permitted
+	AllowedProtocols AllowedListType
 
+	// CampaignProtocolRedirectRulesID references protocol-specific redirect rules
+	CampaignProtocolRedirectRulesID int32
+	// CampaignProtocolRedirectRules contains protocol-specific redirect logic
+	CampaignProtocolRedirectRules *valueobject.RedirectRules
+
+	// IsCampaignOveraged indicates if campaign limits have been exceeded
 	IsCampaignOveraged              bool
 	CampaignOveragedRedirectRulesID int32
 	CampaignOverageRedirectRules    *valueobject.RedirectRules
 
+	// IsCampaignActive indicates if the campaign is active
 	IsCampaignActive              bool
 	CampaignActiveRedirectRulesID int32
 	CampaignDisabledRedirectRules *valueobject.RedirectRules
@@ -51,7 +61,8 @@ type TrackingLink struct {
 	LandingPages map[string]*LandingPage
 }
 
-// AllowedListType represents custom type used to convert list of redirection filters into JSON (JSONb).
+// AllowedListType represents a map of allowed values where the key is the value name
+// and the boolean indicates if it's allowed
 type AllowedListType map[string]bool
 
 // Value returns the JSON-encoded representation.
@@ -77,7 +88,7 @@ func (a *AllowedListType) Scan(value interface{}) error {
 	return nil
 }
 
-// LandingPage type represents data related to tracking links.
+// LandingPage contains information about a landing page associated with a tracking link
 type LandingPage struct {
 	ID         string
 	Title      string

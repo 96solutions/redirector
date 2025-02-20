@@ -3,7 +3,7 @@ CREATE TABLE tracking_links
     slug                        varchar(55)               not null
         primary key,
     campaign_id                 int                       not null,
-    publisher_id                int                       not null,
+    affiliate_id                int                       not null,
     advertiser_id               int                       not null,
     source_id                   int                       not null,
     active                      boolean    default true   not null,

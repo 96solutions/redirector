@@ -8,8 +8,10 @@ import (
 //mockgen -package=mocks -destination=mocks/mock_user_agent_parser.go -source=domain/service/user_agent_parser.go UserAgentParser
 //go:generate mockgen -package=mocks -destination=mocks/mock_user_agent_parser.go -source=user_agent_parser.go UserAgentParser
 
-// UserAgentParserInterface interface describes service which parse data about used device from User-Agent header.
+// UserAgentParserInterface provides functionality to parse User-Agent strings
+// and extract device, platform and browser information.
 type UserAgentParserInterface interface {
-	// Parse function parses data about used device from User-Agent header.
+	// Parse analyzes a User-Agent string and returns structured information about
+	// the client's device, platform, and browser. Returns an error if parsing fails.
 	Parse(userAgent string) (*valueobject.UserAgent, error)
 }

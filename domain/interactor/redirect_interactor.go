@@ -58,12 +58,18 @@ const (
 //mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=redirect_interactor.go RedirectInteractor
 
-// RedirectInteractor interface describes the service to handle requests
-// and return the following target URL to redirect to.
+// RedirectInteractor handles the business logic for processing redirect requests.
+// It validates tracking links, applies redirect rules, and manages click tracking.
 type RedirectInteractor interface {
+	// Redirect processes a redirect request for a given slug and request data.
+	// It validates the tracking link, checks various conditions (protocol, geo, device),
+	// applies redirect rules, and returns the target URL along with click tracking results.
+	// Returns an error if the redirect cannot be processed.
 	Redirect(ctx context.Context, slug string, requestData *dto.RedirectRequestData) (*dto.RedirectResult, error)
 }
 
+// redirectInteractor implements RedirectInteractor interface and handles the core redirect logic
+// including tracking link validation, click tracking, and redirect rule application
 type redirectInteractor struct {
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
 	ipAddressParser         service.IPAddressParserInterface

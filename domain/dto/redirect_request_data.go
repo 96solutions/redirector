@@ -7,17 +7,27 @@ import (
 	"net/url"
 )
 
-// RedirectRequestData type describes set of data required for handling redirect request.
+// RedirectRequestData contains all the information needed to process a redirect request,
+// including request parameters, headers, user agent info, IP address, and protocol.
 type RedirectRequestData struct {
+	// RequestID uniquely identifies this redirect request
 	RequestID string
-	Slug      string
-	Params    map[string][]string
-	Headers   map[string][]string
+	// Slug identifies the tracking link to use
+	Slug string
+	// Params contains URL query parameters
+	Params map[string][]string
+	// Headers contains HTTP request headers
+	Headers map[string][]string
+	// UserAgent is the raw User-Agent header string
 	UserAgent string
-	IP        net.IP
-	Protocol  string
-	Referer   string
-	URL       *url.URL
+	// IP is the client's IP address
+	IP net.IP
+	// Protocol is the request protocol (http/https)
+	Protocol string
+	// Referer contains the referring URL
+	Referer string
+	// URL contains the full request URL
+	URL *url.URL
 }
 
 // GetParam is a helper function for convenient access to the request query params.
