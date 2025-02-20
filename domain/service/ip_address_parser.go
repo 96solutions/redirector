@@ -3,7 +3,8 @@ package service
 
 import "net"
 
-//go:generate mockgen -package=mocks -destination=mocks/mock_ip_address_parser.go -source=domain/service/ip_address_parser.go IPAddressParserInterface
+// mockgen -package=mocks -destination=mocks/mock_ip_address_parser.go -source=domain/service/ip_address_parser.go IPAddressParserInterface
+//go:generate mockgen -package=mocks -destination=mocks/mock_ip_address_parser.go -source=ip_address_parser.go IPAddressParserInterface
 
 // IPAddressParserInterface describes service that parses country code from the provided IP address.
 type IPAddressParserInterface interface {

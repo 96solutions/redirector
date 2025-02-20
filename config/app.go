@@ -13,6 +13,7 @@ import (
 var lock = &sync.Mutex{}
 var applicationConfig *AppConfig
 
+// AppConfig type represents application config.
 type AppConfig struct {
 	DBConf         *DBConf
 	HTTPServerConf *HTTPServerConf
@@ -21,12 +22,15 @@ type AppConfig struct {
 	GeoIP2DBPath string `mapstructure:"geoip2_db_path"`
 }
 
+// String function implements Stringer interfaces and used to represent
+// application configuration as string, mostly used for logging.
 func (cfg *AppConfig) String() string {
 	cfgJSON, _ := json.MarshalIndent(cfg, "", "    ")
 
 	return string(cfgJSON)
 }
 
+// GetConfig function provides access to the application config.
 func GetConfig() *AppConfig {
 	if applicationConfig == nil {
 		lock.Lock()

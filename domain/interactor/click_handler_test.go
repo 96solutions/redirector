@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
 	"github.com/lroman242/redirector/domain/interactor"
 	"github.com/lroman242/redirector/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 func TestClickHandlerFunc_HandleClick(t *testing.T) {

@@ -10,23 +10,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
 	"github.com/lroman242/redirector/domain/interactor"
 	"github.com/lroman242/redirector/domain/valueobject"
 	"github.com/lroman242/redirector/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 func makeRedirectInteractor(ctrl *gomock.Controller, handlers ...interactor.ClickHandlerInterface) (
 	interactor.RedirectInteractor,
 	*mocks.MockTrackingLinksRepositoryInterface,
 	*mocks.MockIPAddressParserInterface,
-	*mocks.MockUserAgentParser,
+	*mocks.MockUserAgentParserInterface,
 ) {
 	trkRepo := mocks.NewMockTrackingLinksRepositoryInterface(ctrl)
 	ipAddressParser := mocks.NewMockIPAddressParserInterface(ctrl)
-	userAgentParser := mocks.NewMockUserAgentParser(ctrl)
+	userAgentParser := mocks.NewMockUserAgentParserInterface(ctrl)
 
 	srv := interactor.NewRedirectInteractor(trkRepo, ipAddressParser, userAgentParser, handlers)
 

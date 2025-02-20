@@ -19,7 +19,6 @@ var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Roll forward or roll back database schema according to the migration files",
 	Run: func(cmd *cobra.Command, args []string) {
-		//TODO: read steps from cmd
 		cfg := config.GetConfig()
 		r := registry.NewRegistry(cfg)
 

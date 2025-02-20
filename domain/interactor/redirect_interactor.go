@@ -52,7 +52,8 @@ const (
 	PlatformToken     = "{platform}"
 )
 
-//go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
+//mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
+//go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=redirect_interactor.go RedirectInteractor
 
 // RedirectInteractor interface describes the service to handle requests
 // and return the following target URL to redirect to.

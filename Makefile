@@ -1,8 +1,17 @@
 TARGET=redirector_$(REVISION)
 INSTALL_DIR=./bin/
-REVISION=$(shell sh -c "git rev-parse --short HEAD" | awk '{print $$1}')
+REVISION=$(shell sh -c "git config --global --add safe.directory $(CURRENT_DIR)" && git rev-parse --short HEAD | awk '{print $$1}')
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIR := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
+
+.PHONY: mocks
+mocks:
+	@mockgen -package=mocks -destination=mocks/mock_clicks_repository.go -source=domain/repository/clicks_repository.go ClicksRepository
+	@mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
+	@mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
+	@mockgen -package=mocks -destination=mocks/mock_tracking_links_repository.go -source=domain/repository/tracking_links_repository.go TrackingLinksRepositoryInterface
+	@mockgen -package=mocks -destination=mocks/mock_ip_address_parser.go -source=domain/service/ip_address_parser.go IPAddressParserInterface
+	@mockgen -package=mocks -destination=mocks/mock_user_agent_parser.go -source=domain/service/user_agent_parser.go UserAgentParser
 
 lint:
 	golangci-lint --exclude-use-default=false --out-format tab run ./...
@@ -47,9 +56,10 @@ compiledaemon:
 
 .PHONY: compile
 compilefull:
-	@ls -la
+#	@ls -la
 	@echo ">>> GIT fix"
-	@git config --global --add safe.directory /usr/src/app
+	@git config --global --add safe.directory $(CURRENT_DIR)
+	@echo "rm vendor"
 	@rm -rf vendor
 	@echo ">>> Current commit hash $(REVISION)"
 	@echo ">>> go build -o $(TARGET)"
@@ -62,4 +72,4 @@ compilefull:
 #TODO: use builder user instead of root
 .PHONY: dockercompile
 dockercompile:
-	@docker run --name redirector_builder --rm --interactive --tty --volume $(CURRENT_DIR):/usr/src/app -w /usr/src/app golang:1.23 make compilefull
+	@docker run --name redirector_builder --rm --interactive --tty --volume $(CURRENT_DIR):/usr/src/app -w /usr/src/app -u $(id -u):$(id -g) golang:1.23 make compilefull

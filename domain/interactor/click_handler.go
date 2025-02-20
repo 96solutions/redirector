@@ -9,7 +9,8 @@ import (
 	"github.com/lroman242/redirector/domain/repository"
 )
 
-//go:generate mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
+//mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
+//go:generate mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=click_handler.go ClickHandlerInterface
 
 // ClickHandlerInterface describes handler which can manage the entity.Click.
 type ClickHandlerInterface interface {

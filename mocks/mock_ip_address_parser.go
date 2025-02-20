@@ -20,6 +20,7 @@ import (
 type MockIPAddressParserInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockIPAddressParserInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockIPAddressParserInterfaceMockRecorder is the mock recorder for MockIPAddressParserInterface.
