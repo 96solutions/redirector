@@ -15,9 +15,9 @@ type TrackingLink struct {
 
 	IsActive bool
 
-	AllowedProtocols AllowedListType
-	AllowedGeos      AllowedListType
-	AllowedDevices   AllowedListType
+	AllowedProtocols                AllowedListType
+	CampaignProtocolRedirectRulesID int32
+	CampaignProtocolRedirectRules   *valueobject.RedirectRules
 
 	IsCampaignOveraged              bool
 	CampaignOveragedRedirectRulesID int32
@@ -27,14 +27,28 @@ type TrackingLink struct {
 	CampaignActiveRedirectRulesID int32
 	CampaignDisabledRedirectRules *valueobject.RedirectRules
 
+	AllowedGeos                AllowedListType
+	CampaignGeoRedirectRulesID int32
+	CampaignGeoRedirectRules   *valueobject.RedirectRules
+
+	AllowedDevices                 AllowedListType
+	CampaignDevicesRedirectRulesID int32
+	CampaignDevicesRedirectRules   *valueobject.RedirectRules
+
+	AllowedOS                 AllowedListType
+	CampaignOSRedirectRulesID int32
+	CampaignOSRedirectRules   *valueobject.RedirectRules
+
 	TargetURLTemplate string
 
-	// AllowDeeplink bool
+	AllowDeeplink bool
 
 	CampaignID   string
 	AffiliateID  string
 	AdvertiserID string
 	SourceID     string
+
+	LandingPages map[string]*LandingPage
 }
 
 // AllowedListType represents custom type used to convert list of redirection filters into JSON (JSONb).
@@ -61,4 +75,12 @@ func (a *AllowedListType) Scan(value interface{}) error {
 	}
 
 	return nil
+}
+
+// LandingPage type represents data related to tracking links.
+type LandingPage struct {
+	ID         string
+	Title      string
+	PreviewURL string
+	TargetURL  string
 }

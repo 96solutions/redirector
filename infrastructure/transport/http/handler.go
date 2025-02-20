@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/interactor"
+	uuid "github.com/satori/go.uuid"
 )
 
 type RedirectHandler struct {
@@ -36,17 +37,22 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slug := vars["slug"]
+	if slug == "" {
+		//TODO: error
+	}
+
 	data := &dto.RedirectRequestData{
+		Slug:      slug,
 		Params:    r.URL.Query(),
 		Headers:   r.Header,
 		UserAgent: r.UserAgent(),
 		IP:        userIP,
 		Protocol:  r.Proto,
 		Referer:   r.Referer(),
-		//RequestID:
+		URL:       r.URL,
+		RequestID: uuid.NewV4().String(),
 	}
-
-	slug := vars["slug"]
 
 	slog.Debug("redirect request", slog.String("slug", slug), "data", data)
 	redirectResult, err := rh.interactor.Redirect(r.Context(), slug, data)

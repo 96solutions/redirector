@@ -10,6 +10,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/opensearch-project/opensearch-go v1.1.0
 	github.com/oschwald/geoip2-golang v1.8.0
+	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/ua-parser/uap-go v0.0.0-20211112212520-00c877edfe0f

@@ -4,18 +4,20 @@ package dto
 
 import (
 	"net"
+	"net/url"
 )
 
 // RedirectRequestData type describes set of data required for handling redirect request.
 type RedirectRequestData struct {
+	RequestID string
+	Slug      string
 	Params    map[string][]string
 	Headers   map[string][]string
 	UserAgent string
 	IP        net.IP
 	Protocol  string
 	Referer   string
-
-	RequestID string
+	URL       *url.URL
 }
 
 // GetParam is a helper function for convenient access to the request query params.

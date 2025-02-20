@@ -23,6 +23,7 @@ var (
 	UnsupportedProtocolError  = errors.New("protocol is not allowed for that tracking link")
 	UnsupportedGeoError       = errors.New("visitor geo is not allowed for that tracking link")
 	UnsupportedDeviceError    = errors.New("visitor device is not allowed for that tracking link")
+	UnsupportedOSError        = errors.New("visitor OS is not allowed for that tracking link")
 	InvalidRedirectTypeError  = errors.New("invalid redirect type is stored in tracking link redirect rules")
 	BlockRedirectError        = errors.New("redirect should be blocked")
 	TrackingLinkDisabledError = errors.New("used tracking link is disabled")
@@ -50,6 +51,8 @@ const (
 	RandomIntToken    = "{random_int}"
 	DeviceToken       = "{device}"
 	PlatformToken     = "{platform}"
+
+	UnknownStrValue = "unknown"
 )
 
 //mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
@@ -111,21 +114,55 @@ func (r *redirectInteractor) Redirect(
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
 	if err != nil {
 		slog.Error("an error occurred while parsing ip address", "ip", requestData.IP, "error", err)
-	}
-	if len(trackingLink.AllowedGeos) > 0 && !trackingLink.AllowedGeos[countryCode] {
-		//TODO: handle trackingLink.UnsupportedGeoRedirectRules
-		return nil, UnsupportedGeoError
+		countryCode = UnknownStrValue
 	}
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
 	if err != nil {
 		slog.Error("an error occurred while parsing user-agent header", "user-agent", requestData.UserAgent, "error", err)
+		ua = &valueobject.UserAgent{
+			SrcString: requestData.UserAgent,
+			Device:    UnknownStrValue,
+			Platform:  UnknownStrValue,
+			Browser:   UnknownStrValue,
+		}
 	}
+
+	if len(trackingLink.AllowedGeos) > 0 && !trackingLink.AllowedGeos[countryCode] {
+		return r.handleRedirectRules(
+			trackingLink.CampaignOverageRedirectRules,
+			ctx,
+			requestData,
+			trackingLink,
+			countryCode,
+			ua,
+			UnsupportedGeoError,
+		)
+	}
+
 	if len(trackingLink.AllowedDevices) > 0 && !trackingLink.AllowedDevices[ua.Device] {
-		//TODO: handle trackingLink.UnsupportedDeviceRedirectRules
-		return nil, UnsupportedDeviceError
+		return r.handleRedirectRules(
+			trackingLink.CampaignOverageRedirectRules,
+			ctx,
+			requestData,
+			trackingLink,
+			countryCode,
+			ua,
+			UnsupportedDeviceError,
+		)
 	}
-	//TODO: check OS + handle trackingLink.UnsupportedOSRedirectRules
+
+	if len(trackingLink.AllowedOS) > 0 && !trackingLink.AllowedOS[ua.Platform] {
+		return r.handleRedirectRules(
+			trackingLink.CampaignOverageRedirectRules,
+			ctx,
+			requestData,
+			trackingLink,
+			countryCode,
+			ua,
+			UnsupportedOSError,
+		)
+	}
 
 	if trackingLink.IsCampaignOveraged {
 		return r.handleRedirectRules(
@@ -133,8 +170,9 @@ func (r *redirectInteractor) Redirect(
 			ctx,
 			requestData,
 			trackingLink,
-			ua,
 			countryCode,
+			ua,
+			nil,
 		)
 	}
 
@@ -144,19 +182,15 @@ func (r *redirectInteractor) Redirect(
 			ctx,
 			requestData,
 			trackingLink,
-			ua,
 			countryCode,
+			ua,
+			nil,
 		)
 	}
 
-	// TODO: prepare target URL template!
-	// if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
-	//	//TODO: handle deeplink
-	//}
-
 	targetURL := r.renderTokens(trackingLink, requestData, ua, countryCode)
 
-	outputCh := r.registerClick(ctx, targetURL, trackingLink, requestData, ua, countryCode)
+	outputCh := r.registerClick(ctx, slug, targetURL, trackingLink, requestData, ua, countryCode)
 
 	return &dto.RedirectResult{
 		TargetURL: targetURL,
@@ -169,22 +203,29 @@ func (r *redirectInteractor) handleRedirectRules(
 	ctx context.Context,
 	requestData *dto.RedirectRequestData,
 	trackingLink *entity.TrackingLink,
-	userAgent *valueobject.UserAgent,
 	countryCode string,
+	userAgent *valueobject.UserAgent,
+	err error,
 ) (*dto.RedirectResult, error) {
 	switch rr.RedirectType {
 	case valueobject.LinkRedirectType:
 		return &dto.RedirectResult{
 			TargetURL: rr.RedirectURL,
-			OutputCh:  r.registerClick(ctx, rr.RedirectURL, trackingLink, requestData, userAgent, countryCode),
+			OutputCh:  r.registerClick(ctx, requestData.Slug, rr.RedirectURL, trackingLink, requestData, userAgent, countryCode),
 		}, nil
 	case valueobject.SlugRedirectType:
+		ctx = context.WithValue(ctx, "slug", requestData.Slug)
 		return r.Redirect(ctx, rr.RedirectSlug, requestData)
 	case valueobject.SmartSlugRedirectType:
 		rnd := rand.New(rand.NewSource(time.Now().Unix()))
 		newSlug := rr.RedirectSmartSlug[rnd.Intn(len(rr.RedirectSmartSlug))]
+		ctx = context.WithValue(ctx, "slug", requestData.Slug)
 		return r.Redirect(ctx, newSlug, requestData)
 	case valueobject.NoRedirectType:
+		if err != nil {
+			return nil, err
+		}
+
 		return nil, BlockRedirectError
 	default:
 		return nil, InvalidRedirectTypeError
@@ -193,6 +234,16 @@ func (r *redirectInteractor) handleRedirectRules(
 
 func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) string {
 	targetURL := trackingLink.TargetURLTemplate
+
+	if landingURL, paramExists := requestData.Params["landing"]; paramExists {
+		if landing, landingExists := trackingLink.LandingPages[landingURL[0]]; landingExists {
+			targetURL = landing.TargetURL
+		}
+	}
+
+	if deeplinkURL, ok := requestData.Params["deeplink"]; ok && trackingLink.AllowDeeplink {
+		targetURL = deeplinkURL[0]
+	}
 
 	tokens := r.tokenRegExp.FindAllString(targetURL, -1)
 	for _, token := range tokens {
@@ -241,7 +292,6 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 			targetURL = strings.ReplaceAll(targetURL, token, ua.Device)
 		case PlatformToken:
 			targetURL = strings.ReplaceAll(targetURL, token, ua.Platform)
-		//TODO: add new tokens
 
 		// replace undefined tokens with empty string
 		default:
@@ -249,25 +299,41 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 		}
 	}
 
+	//TODO: append gclid query param if present in requestData.Params
+
 	return targetURL
 }
 
-func (r *redirectInteractor) registerClick(ctx context.Context, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *dto.ClickProcessingResult {
+func (r *redirectInteractor) registerClick(ctx context.Context, slug string, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *dto.ClickProcessingResult {
 	click := &entity.Click{
-		ID:          requestData.RequestID,
-		TargetURL:   targetURL,
-		TRKLink:     trackingLink,
-		UserAgent:   ua,
+		ID:           requestData.RequestID,
+		TargetURL:    targetURL,
+		Referer:      requestData.Referer,
+		TrkURL:       requestData.URL.String(),
+		ParentSlug:   ctx.Value("slug").(string),
+		Slug:         slug,
+		TRKLink:      trackingLink,
+		SourceID:     trackingLink.SourceID,
+		CampaignID:   trackingLink.CampaignID,
+		AffiliateID:  trackingLink.AffiliateID,
+		AdvertiserID: trackingLink.AdvertiserID,
+		IsParallel:   false,
+		LandingID:    requestData.Params["landing"][0],
+		GCLID:        requestData.Params["gclid"][0],
+		UserAgent:    ua,
+		Agent:        ua.SrcString,
+		Platform:     ua.Platform,
+		Browser:      ua.Browser,
+		Device:       ua.Device,
+		IP:           requestData.IP,
+		//Region:       "",
 		CountryCode: countryCode,
-		IP:          requestData.IP,
-		Referer:     requestData.Referer,
-
-		P1: strings.Join(requestData.GetParam("p1"), ","),
-		P2: strings.Join(requestData.GetParam("p2"), ","),
-		P3: strings.Join(requestData.GetParam("p3"), ","),
-		P4: strings.Join(requestData.GetParam("p4"), ","),
-
-		//TODO: add more params...
+		//City:         "",
+		P1:        strings.Join(requestData.GetParam("p1"), ","),
+		P2:        strings.Join(requestData.GetParam("p2"), ","),
+		P3:        strings.Join(requestData.GetParam("p3"), ","),
+		P4:        strings.Join(requestData.GetParam("p4"), ","),
+		CreatedAt: time.Now(),
 	}
 
 	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
