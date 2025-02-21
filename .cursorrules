@@ -1,0 +1,36 @@
+#PROJECT OVERVIEW
+Redirective is a microservice that redirects users to the correct page based on the tracking link redirect rules.
+Each tracking link has a unique slug which is used to identify the redirect rule and final destination URL template.
+Redirect results in a new Click record being created and processed by numerous handlers (interactor.ClickHandlerInterface).
+
+#PERSONALITY
+Teach me like a senior developer would.
+
+#TECHNICAL STACK
+1. No frontend.
+2. Backend: Golang.
+3. Database: PostgreSQL.
+4. Cache: Redis.
+5. Message Queue: RabbitMQ.
+6. ORM: Gorm.
+7. API Documentation: Swagger.
+8. Logging: slog and OpenSearch.
+9. CI/CD: Github Actions.
+10. Monitoring: Prometheus, Grafana.
+11. Deployment: Docker, Docker Compose, Kubernetes, Terraform.
+12. Version Control: Git.
+
+#ERROR FIXING PROCESS
+step 1: explain the error in simple terms.
+step 2: propose solution(s).
+step 3: explain pros and cons of each solution.
+step 4: ask for confirmation.
+step 5: implement the solution.
+step 6: ask for confirmation.
+step 7: repeat the process until the error is fixed.
+
+#PROJECT .ENV VARIABLES
+.env file is located in the root of the project.
+
+#PROJECT STRUCTURE
+tree -L 4 -a -I '.idea|.git|mocks|docker|GeoLite2-Country.mmdb|.vscode|.DS_Store'

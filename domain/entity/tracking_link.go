@@ -67,9 +67,7 @@ type AllowedListType map[string]bool
 
 // Value returns the JSON-encoded representation.
 func (a AllowedListType) Value() (driver.Value, error) {
-	x := make(map[string]bool)
-
-	return json.Marshal(x)
+	return json.Marshal(map[string]bool(a))
 }
 
 // Scan decodes a JSON-encoded value.

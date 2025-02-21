@@ -47,9 +47,19 @@ func (sch *storeClickHandler) HandleClick(ctx context.Context, click *entity.Cli
 
 	go func(ctx context.Context, click *entity.Click) {
 		defer close(output)
-		output <- &dto.ClickProcessingResult{
-			Click: click,
-			Err:   sch.repo.Save(ctx, click),
+		// Add context cancellation handling
+		select {
+		case <-ctx.Done():
+			output <- &dto.ClickProcessingResult{
+				Click: click,
+				Err:   ctx.Err(),
+			}
+			return
+		default:
+			output <- &dto.ClickProcessingResult{
+				Click: click,
+				Err:   sch.repo.Save(ctx, click),
+			}
 		}
 	}(ctx, click)
 

@@ -3,7 +3,9 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/lroman242/redirector/domain/entity"
 	"github.com/lroman242/redirector/domain/valueobject"
@@ -66,6 +68,12 @@ LEFT JOIN redirect_rules osr ON osr.id = t.campaign_os_redirect_rules_id
 WHERE t.slug = $1
 LIMIT 1`
 
+// findLandingPagesBySlugQuery selects landing pages associated with a tracking link
+const findLandingPagesBySlugQuery = `
+SELECT id, title, preview_url, target_url
+FROM landing_pages
+WHERE campaign_id = $1`
+
 // SQLStorage implements repository.TrackingLinksRepositoryInterface.
 type SQLStorage struct {
 	*sql.DB
@@ -80,6 +88,10 @@ func NewSQLStorage(dbConnection *sql.DB) *SQLStorage {
 
 // FindTrackingLink retrieves a tracking link and its associated redirect rules by slug.
 func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.TrackingLink {
+	// Add timeout
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	stmt, err := s.DB.PrepareContext(ctx, findTrackingLinkBySlugQuery)
 	if err != nil {
 		slog.Error("an error occurred while preparing statement", logger.ErrAttr(err))
@@ -169,5 +181,50 @@ func (s *SQLStorage) FindTrackingLink(ctx context.Context, slug string) *entity.
 		return nil
 	}
 
+	// Load landing pages
+	if err := s.loadLandingPages(ctx, trkLink); err != nil {
+		slog.Error("an error occurred while loading landing pages", logger.ErrAttr(err))
+		// Don't return nil here - we still want to return the tracking link even if landing pages fail to load
+	}
+
 	return trkLink
+}
+
+// loadLandingPages loads landing pages for a tracking link
+func (s *SQLStorage) loadLandingPages(ctx context.Context, trkLink *entity.TrackingLink) error {
+	stmt, err := s.DB.PrepareContext(ctx, findLandingPagesBySlugQuery)
+	if err != nil {
+		return fmt.Errorf("failed to prepare landing pages query: %w", err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx, trkLink.CampaignID)
+	if err != nil {
+		return fmt.Errorf("failed to execute landing pages query: %w", err)
+	}
+	defer rows.Close()
+
+	// Initialize the landing pages map
+	trkLink.LandingPages = make(map[string]*entity.LandingPage)
+
+	for rows.Next() {
+		landingPage := new(entity.LandingPage)
+		err := rows.Scan(
+			&landingPage.ID,
+			&landingPage.Title,
+			&landingPage.PreviewURL,
+			&landingPage.TargetURL,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to scan landing page: %w", err)
+		}
+
+		trkLink.LandingPages[landingPage.ID] = landingPage
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("error iterating landing pages rows: %w", err)
+	}
+
+	return nil
 }

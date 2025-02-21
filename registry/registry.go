@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/lroman242/redirector/config"
 	"github.com/lroman242/redirector/domain/interactor"
@@ -91,6 +92,17 @@ func (r *registry) NewDB() *sql.DB {
 	db.SetConnMaxLifetime(r.conf.DBConf.ConnectionMaxLifeDuration())
 	db.SetMaxIdleConns(r.conf.DBConf.MaxIdleConnections)
 	db.SetMaxOpenConns(r.conf.DBConf.MaxOpenConnections)
+
+	// Add periodic health check
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		for range ticker.C {
+			if err := db.Ping(); err != nil {
+				slog.Error("Database health check failed", logger.ErrAttr(err))
+				//TODO: Implement reconnection logic
+			}
+		}
+	}()
 
 	return db
 }

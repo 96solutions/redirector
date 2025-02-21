@@ -25,32 +25,42 @@ type Click struct {
 	// ParentSlug identifies the parent tracking link if this was a chained redirect
 	ParentSlug string
 
-	TRKLink      *TrackingLink
-	SourceID     string
-	CampaignID   string
-	AffiliateID  string
+	// TRKLink is the tracking link that was used
+	TRKLink *TrackingLink
+	// SourceID is the source ID
+	SourceID string
+	// CampaignID is the campaign ID
+	CampaignID string
+	// AffiliateID is the affiliate ID
+	AffiliateID string
+	// AdvertiserID is the advertiser ID
 	AdvertiserID string
-	IsParallel   bool
+	// IsParallel indicates if this is a parallel redirect
+	IsParallel bool
 
+	// LandingID is the landing page ID
 	LandingID string
-
+	// GCLID is the Google Click Identifier
 	GCLID string
 
+	// UserAgent is the user agent
 	UserAgent *valueobject.UserAgent
 	Agent     string
 	Platform  string //os
 	Browser   string
 	Device    string
 
+	// IP is the IP address
 	IP net.IP
-	//Region      string
+	// CountryCode is the country code
 	CountryCode string
-	//City        string
 
+	// P1-P4 are custom parameters
 	P1 string
 	P2 string
 	P3 string
 	P4 string
 
+	// CreatedAt is the creation time
 	CreatedAt time.Time
 }

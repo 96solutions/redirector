@@ -3,6 +3,7 @@
 package dto
 
 import (
+	"errors"
 	"net"
 	"net/url"
 )
@@ -37,4 +38,16 @@ func (rrd *RedirectRequestData) GetParam(key string) []string {
 	}
 
 	return make([]string, 0, 0)
+}
+
+// Validate function validates the redirect request data.
+func (rrd *RedirectRequestData) Validate() error {
+	if rrd.Slug == "" {
+		return errors.New("slug is required")
+	}
+	if rrd.IP == nil {
+		return errors.New("IP is required")
+	}
+	//TODO: Add more validation rules
+	return nil
 }
