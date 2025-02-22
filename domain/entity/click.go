@@ -27,40 +27,44 @@ type Click struct {
 
 	// TRKLink is the tracking link that was used
 	TRKLink *TrackingLink
-	// SourceID is the source ID
+	// SourceID identifies the traffic source
 	SourceID string
-	// CampaignID is the campaign ID
+	// CampaignID identifies the campaign
 	CampaignID string
-	// AffiliateID is the affiliate ID
+	// AffiliateID identifies the affiliate
 	AffiliateID string
-	// AdvertiserID is the advertiser ID
+	// AdvertiserID identifies the advertiser
 	AdvertiserID string
 	// IsParallel indicates if this is a parallel redirect
 	IsParallel bool
 
-	// LandingID is the landing page ID
+	// LandingID identifies the landing page
 	LandingID string
 	// GCLID is the Google Click Identifier
 	GCLID string
 
-	// UserAgent is the user agent
+	// UserAgent contains parsed user agent information
 	UserAgent *valueobject.UserAgent
-	Agent     string
-	Platform  string //os
-	Browser   string
-	Device    string
+	// Agent is the raw user agent string
+	Agent string
+	// Platform is the operating system
+	Platform string
+	// Browser is the web browser name
+	Browser string
+	// Device is the device type
+	Device string
 
-	// IP is the IP address
+	// IP is the visitor's IP address
 	IP net.IP
-	// CountryCode is the country code
+	// CountryCode is the visitor's country code
 	CountryCode string
 
-	// P1-P4 are custom parameters
+	// P1-P4 are custom tracking parameters
 	P1 string
 	P2 string
 	P3 string
 	P4 string
 
-	// CreatedAt is the creation time
+	// CreatedAt is when this click was recorded
 	CreatedAt time.Time
 }

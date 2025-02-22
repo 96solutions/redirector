@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 
@@ -33,7 +34,7 @@ Examples:
   # Apply the next 3 migrations
   redirector migrate 3`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		// Parse steps argument
 		steps, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -50,7 +51,7 @@ Examples:
 		r := registry.NewRegistry(cfg)
 
 		db := r.NewDB()
-		defer db.Close()
+		defer func() { _ = db.Close() }()
 
 		driver, err := postgres.WithInstance(db, &postgres.Config{})
 		if err != nil {
@@ -69,8 +70,8 @@ Examples:
 		}
 
 		// Apply migrations
-		if err := m.Steps(steps); err != nil {
-			if err == migrate.ErrNoChange {
+		if err = m.Steps(steps); err != nil {
+			if errors.Is(err, migrate.ErrNoChange) {
 				slog.Info("No migrations to apply")
 				return
 			}
@@ -80,7 +81,7 @@ Examples:
 
 		// Get current version
 		version, dirty, err := m.Version()
-		if err != nil && err != migrate.ErrNilVersion {
+		if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 			slog.Error("Failed to get migration version", "error", err)
 			return
 		}

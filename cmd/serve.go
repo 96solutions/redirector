@@ -18,7 +18,7 @@ var serveCmd = &cobra.Command{
 	Long: `Start the HTTP server and begin handling redirect requests.
 The server will listen on the configured host and port, processing
 redirect rules according to the application configuration.`,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		reg := registry.NewRegistry(config.GetConfig())
 
 		server := reg.NewServer()

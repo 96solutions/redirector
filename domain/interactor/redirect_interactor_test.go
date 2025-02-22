@@ -51,7 +51,7 @@ func TestRedirectInteractor_Redirect_TrackingLinkNotFoundError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(nil)
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 
-	if !errors.Is(err, interactor.TrackingLinkNotFoundError) {
+	if !errors.Is(err, interactor.ErrTrackingLinkNotFound) {
 		t.Error("unexpected result, TrackingLinkNotFoundError expected")
 	}
 	if rResult != nil {
@@ -83,7 +83,7 @@ func TestRedirectInteractor_Redirect_DisabledTrackingLinkError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, interactor.TrackingLinkDisabledError) {
+	if !errors.Is(err, interactor.ErrTrackingLinkDisabled) {
 		t.Error("unexpected result, TrackingLinkDisabledError expected")
 	}
 	if rResult != nil {
@@ -115,7 +115,7 @@ func TestRedirectInteractor_Redirect_WrongProtocolError(t *testing.T) {
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, interactor.UnsupportedProtocolError) {
+	if !errors.Is(err, interactor.ErrUnsupportedProtocol) {
 		t.Error("unexpected result, UnsupportedProtocolError expected")
 	}
 	if rResult != nil {
@@ -149,7 +149,7 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, interactor.UnsupportedGeoError) {
+	if !errors.Is(err, interactor.ErrUnsupportedGeo) {
 		t.Error("unexpected result, UnsupportedGeoError expected")
 	}
 	if rResult != nil {
@@ -190,7 +190,7 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 	}, nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
-	if !errors.Is(err, interactor.UnsupportedDeviceError) {
+	if !errors.Is(err, interactor.ErrUnsupportedDevice) {
 		t.Error("unexpected result, UnsupportedDeviceError expected")
 	}
 	if rResult != nil {
@@ -300,7 +300,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     interactor.BlockRedirectError,
+			expectedError:     interactor.ErrBlockRedirect,
 		},
 		{
 			name: "OveragedRedirectRulesInvalidRedirectType",
@@ -319,7 +319,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     interactor.InvalidRedirectTypeError,
+			expectedError:     interactor.ErrInvalidRedirectType,
 		},
 	}
 
@@ -524,7 +524,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     interactor.BlockRedirectError,
+			expectedError:     interactor.ErrBlockRedirect,
 		},
 		{
 			name: "CampaignDisabledRedirectRulesInvalidRedirectType",
@@ -544,7 +544,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				},
 			},
 			expectedTargetURL: "",
-			expectedError:     interactor.InvalidRedirectTypeError,
+			expectedError:     interactor.ErrInvalidRedirectType,
 		},
 	}
 

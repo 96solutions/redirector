@@ -37,7 +37,7 @@ func (rrd *RedirectRequestData) GetParam(key string) []string {
 		return val
 	}
 
-	return make([]string, 0, 0)
+	return make([]string, 0)
 }
 
 // Validate function validates the redirect request data.

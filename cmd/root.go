@@ -17,7 +17,7 @@ var rootCmd = &cobra.Command{
 	Short: "Redirector is a simple application to handle HTTP redirects.",
 	Long: `Redirector is a microservice that handles HTTP redirects based on configurable rules.
 It supports various redirect types including geo-targeting, device detection, and A/B testing.`,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		cfg := config.GetConfig()
 
 		log := logger.NewLogger(cfg.LogConf)
@@ -92,7 +92,11 @@ func init() {
 	rootCmd.PersistentFlags().Int("redis_read_timeout", 3, "Timeout for socket reads in seconds")
 	rootCmd.PersistentFlags().Int("redis_write_timeout", 3, "Timeout for socket writes in seconds")
 	rootCmd.PersistentFlags().Int("redis_pool_size", 10, "Maximum number of socket connections")
-	rootCmd.PersistentFlags().Int("redis_pool_timeout", 4, "Time client waits for connection if all connections are busy in seconds")
+	rootCmd.PersistentFlags().Int(
+		"redis_pool_timeout",
+		4,
+		"Time client waits for connection if all connections are busy in seconds",
+	)
 
 	// GeoIP2 configuration flags
 	rootCmd.PersistentFlags().String("geoip2_db_path", "GeoIP2-City.mmdb", "path to GeoIP2 DB file")

@@ -28,41 +28,61 @@ type TrackingLink struct {
 	CampaignProtocolRedirectRules *valueobject.RedirectRules
 
 	// IsCampaignOveraged indicates if campaign limits have been exceeded
-	IsCampaignOveraged              bool
+	IsCampaignOveraged bool
+	// CampaignOveragedRedirectRulesID references rules for overaged campaigns
 	CampaignOveragedRedirectRulesID int32
-	CampaignOverageRedirectRules    *valueobject.RedirectRules
+	// CampaignOverageRedirectRules contains redirect logic for overaged campaigns
+	CampaignOverageRedirectRules *valueobject.RedirectRules
 
-	// IsCampaignActive indicates if the campaign is active
-	IsCampaignActive              bool
+	// IsCampaignActive indicates if the campaign is currently active
+	IsCampaignActive bool
+	// CampaignActiveRedirectRulesID references rules for inactive campaigns
 	CampaignActiveRedirectRulesID int32
+	// CampaignDisabledRedirectRules contains redirect logic for inactive campaigns
 	CampaignDisabledRedirectRules *valueobject.RedirectRules
 
-	AllowedGeos                AllowedListType
+	// AllowedGeos defines which geographic locations are permitted
+	AllowedGeos AllowedListType
+	// CampaignGeoRedirectRulesID references geo-specific redirect rules
 	CampaignGeoRedirectRulesID int32
-	CampaignGeoRedirectRules   *valueobject.RedirectRules
+	// CampaignGeoRedirectRules contains redirect logic for geo restrictions
+	CampaignGeoRedirectRules *valueobject.RedirectRules
 
-	AllowedDevices                 AllowedListType
+	// AllowedDevices defines which device types are permitted
+	AllowedDevices AllowedListType
+	// CampaignDevicesRedirectRulesID references device-specific redirect rules
 	CampaignDevicesRedirectRulesID int32
-	CampaignDevicesRedirectRules   *valueobject.RedirectRules
+	// CampaignDevicesRedirectRules contains redirect logic for device restrictions
+	CampaignDevicesRedirectRules *valueobject.RedirectRules
 
-	AllowedOS                 AllowedListType
+	// AllowedOS defines which operating systems are permitted
+	AllowedOS AllowedListType
+	// CampaignOSRedirectRulesID references OS-specific redirect rules
 	CampaignOSRedirectRulesID int32
-	CampaignOSRedirectRules   *valueobject.RedirectRules
+	// CampaignOSRedirectRules contains redirect logic for OS restrictions
+	CampaignOSRedirectRules *valueobject.RedirectRules
 
+	// TargetURLTemplate is the template for generating the final redirect URL
 	TargetURLTemplate string
 
+	// AllowDeeplink indicates if deeplink redirects are allowed
 	AllowDeeplink bool
 
-	CampaignID   string
-	AffiliateID  string
+	// CampaignID identifies the campaign this link belongs to
+	CampaignID string
+	// AffiliateID identifies the affiliate
+	AffiliateID string
+	// AdvertiserID identifies the advertiser
 	AdvertiserID string
-	SourceID     string
+	// SourceID identifies the traffic source
+	SourceID string
 
+	// LandingPages maps landing page IDs to their configurations
 	LandingPages map[string]*LandingPage
 }
 
 // AllowedListType represents a map of allowed values where the key is the value name
-// and the boolean indicates if it's allowed
+// and the boolean indicates if it's allowed.
 type AllowedListType map[string]bool
 
 // Value returns the JSON-encoded representation.
@@ -83,13 +103,18 @@ func (a *AllowedListType) Scan(value interface{}) error {
 		return err
 	}
 
+	*a = x
 	return nil
 }
 
-// LandingPage contains information about a landing page associated with a tracking link
+// LandingPage contains information about a landing page associated with a tracking link.
 type LandingPage struct {
-	ID         string
-	Title      string
+	// ID uniquely identifies this landing page
+	ID string
+	// Title is the display name of the landing page
+	Title string
+	// PreviewURL is the URL where the landing page can be previewed
 	PreviewURL string
-	TargetURL  string
+	// TargetURL is the actual URL where traffic will be sent
+	TargetURL string
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/lroman242/redirector/domain/valueobject"
 )
 
-//mockgen -package=mocks -destination=mocks/mock_user_agent_parser.go -source=domain/service/user_agent_parser.go UserAgentParser
 //go:generate mockgen -package=mocks -destination=mocks/mock_user_agent_parser.go -source=user_agent_parser.go UserAgentParser
 
 // UserAgentParserInterface provides functionality to parse User-Agent strings

@@ -91,7 +91,7 @@ func initConfig() *AppConfig {
 
 	// add watcher on init
 	if applicationConfig == nil {
-		viper.OnConfigChange(func(e fsnotify.Event) {
+		viper.OnConfigChange(func(_ fsnotify.Event) {
 			applicationConfig = initConfig()
 		})
 		viper.WatchConfig()

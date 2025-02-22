@@ -20,42 +20,51 @@ import (
 )
 
 var (
-	UnsupportedProtocolError  = errors.New("protocol is not allowed for that tracking link")
-	UnsupportedGeoError       = errors.New("visitor geo is not allowed for that tracking link")
-	UnsupportedDeviceError    = errors.New("visitor device is not allowed for that tracking link")
-	UnsupportedOSError        = errors.New("visitor OS is not allowed for that tracking link")
-	InvalidRedirectTypeError  = errors.New("invalid redirect type is stored in tracking link redirect rules")
-	BlockRedirectError        = errors.New("redirect should be blocked")
-	TrackingLinkDisabledError = errors.New("used tracking link is disabled")
-	TrackingLinkNotFoundError = errors.New("no tracking link was found by slug")
+	// ErrUnsupportedProtocol is returned when the request protocol is not allowed.
+	ErrUnsupportedProtocol = errors.New("protocol is not allowed for that tracking link")
+	// ErrUnsupportedGeo is returned when the visitor's geo location is not allowed.
+	ErrUnsupportedGeo = errors.New("visitor geo is not allowed for that tracking link")
+	// ErrUnsupportedDevice is returned when the visitor's device type is not allowed.
+	ErrUnsupportedDevice = errors.New("visitor device is not allowed for that tracking link")
+	// ErrUnsupportedOS is returned when the visitor's operating system is not allowed.
+	ErrUnsupportedOS = errors.New("visitor OS is not allowed for that tracking link")
+	// ErrInvalidRedirectType is returned when the redirect rules contain an invalid type.
+	ErrInvalidRedirectType = errors.New("invalid redirect type is stored in tracking link redirect rules")
+	// ErrBlockRedirect is returned when the redirect should be blocked.
+	ErrBlockRedirect = errors.New("redirect should be blocked")
+	// ErrTrackingLinkDisabled is returned when the tracking link is disabled.
+	ErrTrackingLinkDisabled = errors.New("used tracking link is disabled")
+	// ErrTrackingLinkNotFound is returned when no tracking link is found for the given slug.
+	ErrTrackingLinkNotFound = errors.New("no tracking link was found by slug")
 )
 
 const (
-	IPAddressToken    = "{ip}"
-	ClickIDToken      = "{click_id}"
-	UserAgentToken    = "{user_agent}"
-	CampaignIDToken   = "{campaign_id}"
-	AffiliateIDToken  = "{aff_id}"
-	SourceIDToken     = "{source_id}"
-	AdvertiserIDToken = "{advertiser_id}"
-	DateToken         = "{date}"
-	DateTimeToken     = "{date_time}"
-	TimestampToken    = "{timestamp}"
-	P1Token           = "{p1}"
-	P2Token           = "{p2}"
-	P3Token           = "{p3}"
-	P4Token           = "{p4}"
-	CountryCodeToken  = "{country_code}"
-	RefererToken      = "{referer}"
-	RandomStrToken    = "{random_str}"
-	RandomIntToken    = "{random_int}"
-	DeviceToken       = "{device}"
-	PlatformToken     = "{platform}"
+	ipAddressToken    = "{ip}"
+	clickIDToken      = "{click_id}"
+	userAgentToken    = "{user_agent}"
+	campaignIDToken   = "{campaign_id}"
+	affiliateIDToken  = "{aff_id}"
+	sourceIDToken     = "{source_id}"
+	advertiserIDToken = "{advertiser_id}"
+	dateToken         = "{date}"
+	dateTimeToken     = "{date_time}"
+	timestampToken    = "{timestamp}"
+	p1Token           = "{p1}"
+	p2Token           = "{p2}"
+	p3Token           = "{p3}"
+	p4Token           = "{p4}"
+	countryCodeToken  = "{country_code}"
+	refererToken      = "{referer}"
+	randomStrToken    = "{random_str}"
+	randomIntToken    = "{random_int}"
+	deviceToken       = "{device}"
+	platformToken     = "{platform}"
 
-	UnknownStrValue = "unknown"
+	unknownStrValue = "unknown"
+
+	randomStringLen = 32
 )
 
-//mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=domain/interactor/redirect_interactor.go RedirectInteractor
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=redirect_interactor.go RedirectInteractor
 
 // RedirectInteractor handles the business logic for processing redirect requests.
@@ -69,7 +78,7 @@ type RedirectInteractor interface {
 }
 
 // redirectInteractor implements RedirectInteractor interface and handles the core redirect logic
-// including tracking link validation, click tracking, and redirect rule application
+// including tracking link validation, click tracking, and redirect rule application.
 type redirectInteractor struct {
 	trackingLinksRepository repository.TrackingLinksRepositoryInterface
 	ipAddressParser         service.IPAddressParserInterface
@@ -102,25 +111,23 @@ func (r *redirectInteractor) Redirect(
 	slug string,
 	requestData *dto.RedirectRequestData,
 ) (*dto.RedirectResult, error) {
-	// TODO: check if sub redirect and drop on >= 3
-
 	trackingLink := r.trackingLinksRepository.FindTrackingLink(ctx, slug)
 	if trackingLink == nil {
-		return nil, TrackingLinkNotFoundError
+		return nil, ErrTrackingLinkNotFound
 	}
 
 	if !trackingLink.IsActive {
-		return nil, TrackingLinkDisabledError
+		return nil, ErrTrackingLinkDisabled
 	}
 
 	if len(trackingLink.AllowedProtocols) > 0 && !trackingLink.AllowedProtocols[requestData.Protocol] {
-		return nil, UnsupportedProtocolError
+		return nil, ErrUnsupportedProtocol
 	}
 
 	countryCode, err := r.ipAddressParser.Parse(requestData.IP)
 	if err != nil {
 		slog.Error("an error occurred while parsing ip address", "ip", requestData.IP, "error", err)
-		countryCode = UnknownStrValue
+		countryCode = unknownStrValue
 	}
 
 	ua, err := r.userAgentParser.Parse(requestData.UserAgent)
@@ -128,52 +135,52 @@ func (r *redirectInteractor) Redirect(
 		slog.Error("an error occurred while parsing user-agent header", "user-agent", requestData.UserAgent, "error", err)
 		ua = &valueobject.UserAgent{
 			SrcString: requestData.UserAgent,
-			Device:    UnknownStrValue,
-			Platform:  UnknownStrValue,
-			Browser:   UnknownStrValue,
+			Device:    unknownStrValue,
+			Platform:  unknownStrValue,
+			Browser:   unknownStrValue,
 		}
 	}
 
 	if len(trackingLink.AllowedGeos) > 0 && !trackingLink.AllowedGeos[countryCode] {
 		return r.handleRedirectRules(
-			trackingLink.CampaignOverageRedirectRules,
 			ctx,
+			trackingLink.CampaignOverageRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
 			ua,
-			UnsupportedGeoError,
+			ErrUnsupportedGeo,
 		)
 	}
 
 	if len(trackingLink.AllowedDevices) > 0 && !trackingLink.AllowedDevices[ua.Device] {
 		return r.handleRedirectRules(
-			trackingLink.CampaignOverageRedirectRules,
 			ctx,
+			trackingLink.CampaignOverageRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
 			ua,
-			UnsupportedDeviceError,
+			ErrUnsupportedDevice,
 		)
 	}
 
 	if len(trackingLink.AllowedOS) > 0 && !trackingLink.AllowedOS[ua.Platform] {
 		return r.handleRedirectRules(
-			trackingLink.CampaignOverageRedirectRules,
 			ctx,
+			trackingLink.CampaignOverageRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
 			ua,
-			UnsupportedOSError,
+			ErrUnsupportedOS,
 		)
 	}
 
 	if trackingLink.IsCampaignOveraged {
 		return r.handleRedirectRules(
-			trackingLink.CampaignOverageRedirectRules,
 			ctx,
+			trackingLink.CampaignOverageRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
@@ -184,8 +191,8 @@ func (r *redirectInteractor) Redirect(
 
 	if !trackingLink.IsCampaignActive {
 		return r.handleRedirectRules(
-			trackingLink.CampaignDisabledRedirectRules,
 			ctx,
+			trackingLink.CampaignDisabledRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
@@ -205,8 +212,8 @@ func (r *redirectInteractor) Redirect(
 }
 
 func (r *redirectInteractor) handleRedirectRules(
-	rr *valueobject.RedirectRules,
 	ctx context.Context,
+	rr *valueobject.RedirectRules,
 	requestData *dto.RedirectRequestData,
 	trackingLink *entity.TrackingLink,
 	countryCode string,
@@ -232,13 +239,16 @@ func (r *redirectInteractor) handleRedirectRules(
 			return nil, err
 		}
 
-		return nil, BlockRedirectError
+		return nil, ErrBlockRedirect
 	default:
-		return nil, InvalidRedirectTypeError
+		return nil, ErrInvalidRedirectType
 	}
 }
 
-func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) string {
+func (r *redirectInteractor) makeRedirectTemplate(
+	trackingLink *entity.TrackingLink,
+	requestData *dto.RedirectRequestData,
+) string {
 	targetURL := trackingLink.TargetURLTemplate
 
 	if landingURL, paramExists := requestData.Params["landing"]; paramExists {
@@ -251,52 +261,58 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 		targetURL = deeplinkURL[0]
 	}
 
+	return targetURL
+}
+
+func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) string {
+	targetURL := r.makeRedirectTemplate(trackingLink, requestData)
+
 	tokens := r.tokenRegExp.FindAllString(targetURL, -1)
 	for _, token := range tokens {
 		switch token {
-		case IPAddressToken:
+		case ipAddressToken:
 			targetURL = strings.ReplaceAll(targetURL, token, requestData.IP.String())
-		case ClickIDToken:
+		case clickIDToken:
 			targetURL = strings.ReplaceAll(targetURL, token, requestData.RequestID)
-		case UserAgentToken:
+		case userAgentToken:
 			targetURL = strings.ReplaceAll(targetURL, token, requestData.UserAgent)
-		case CampaignIDToken:
+		case campaignIDToken:
 			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.CampaignID)
-		case AffiliateIDToken:
+		case affiliateIDToken:
 			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.AffiliateID)
-		case SourceIDToken:
+		case sourceIDToken:
 			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.SourceID)
-		case AdvertiserIDToken:
+		case advertiserIDToken:
 			targetURL = strings.ReplaceAll(targetURL, token, trackingLink.AdvertiserID)
-		case DateToken:
+		case dateToken:
 			targetURL = strings.ReplaceAll(targetURL, token, time.Now().Format("2006-01-02"))
-		case DateTimeToken:
+		case dateTimeToken:
 			targetURL = strings.ReplaceAll(targetURL, token, time.Now().Format("2006-01-02T15:04:05"))
-		case TimestampToken:
+		case timestampToken:
 			targetURL = strings.ReplaceAll(targetURL, token, strconv.FormatInt(time.Now().Unix(), 10))
-		case P1Token:
+		case p1Token:
 			values := requestData.GetParam("p1")
 			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
-		case P2Token:
+		case p2Token:
 			values := requestData.GetParam("p2")
 			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
-		case P3Token:
+		case p3Token:
 			values := requestData.GetParam("p3")
 			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
-		case P4Token:
+		case p4Token:
 			values := requestData.GetParam("p4")
 			targetURL = strings.ReplaceAll(targetURL, token, strings.Join(values, ","))
-		case CountryCodeToken:
+		case countryCodeToken:
 			targetURL = strings.ReplaceAll(targetURL, token, countryCode)
-		case RefererToken:
+		case refererToken:
 			targetURL = strings.ReplaceAll(targetURL, token, requestData.Referer)
-		case RandomStrToken:
-			targetURL = strings.ReplaceAll(targetURL, token, randString(32))
-		case RandomIntToken:
+		case randomStrToken:
+			targetURL = strings.ReplaceAll(targetURL, token, randString(randomStringLen))
+		case randomIntToken:
 			targetURL = strings.ReplaceAll(targetURL, token, strconv.Itoa(rand.Intn(99999999-10000)+10000))
-		case DeviceToken:
+		case deviceToken:
 			targetURL = strings.ReplaceAll(targetURL, token, ua.Device)
-		case PlatformToken:
+		case platformToken:
 			targetURL = strings.ReplaceAll(targetURL, token, ua.Platform)
 
 		// replace undefined tokens with empty string
@@ -310,7 +326,15 @@ func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, req
 	return targetURL
 }
 
-func (r *redirectInteractor) registerClick(ctx context.Context, slug string, targetURL string, trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) <-chan *dto.ClickProcessingResult {
+func (r *redirectInteractor) registerClick(
+	ctx context.Context,
+	slug string,
+	targetURL string,
+	trackingLink *entity.TrackingLink,
+	requestData *dto.RedirectRequestData,
+	ua *valueobject.UserAgent,
+	countryCode string,
+) <-chan *dto.ClickProcessingResult {
 	click := &entity.Click{
 		ID:           requestData.RequestID,
 		TargetURL:    targetURL,
@@ -373,17 +397,6 @@ func merge(clkProcessingResultChans []<-chan *dto.ClickProcessingResult) <-chan 
 	}()
 
 	return out
-}
-
-// contains checks if a string is present in a slice.
-func contains(needle string, haystack []string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-
-	return false
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

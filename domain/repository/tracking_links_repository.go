@@ -6,7 +6,6 @@ import (
 	"github.com/lroman242/redirector/domain/entity"
 )
 
-//mockgen -package=mocks -destination=mocks/mock_tracking_links_repository.go -source=domain/repository/tracking_links_repository.go TrackingLinksRepositoryInterface
 //go:generate mockgen -package=mocks -destination=mocks/mock_tracking_links_repository.go -source=tracking_links_repository.go TrackingLinksRepositoryInterface
 
 // TrackingLinksRepositoryInterface interface describes clicks storage repository.

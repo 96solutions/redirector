@@ -32,7 +32,7 @@ type RedisConf struct {
 	PoolTimeout int `mapstructure:"redis_pool_timeout"`
 }
 
-// Addr returns the Redis server address in host:port format
+// Addr returns the Redis server address in host:port format.
 func (c *RedisConf) Addr() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }

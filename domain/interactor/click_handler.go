@@ -9,7 +9,6 @@ import (
 	"github.com/lroman242/redirector/domain/repository"
 )
 
-//mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=domain/interactor/click_handler.go ClickHandlerInterface
 //go:generate mockgen -package=mocks -destination=mocks/mock_click_handler.go -source=click_handler.go ClickHandlerInterface
 
 // ClickHandlerInterface defines how click events should be processed.
@@ -30,7 +29,7 @@ func (ch ClickHandlerFunc) HandleClick(ctx context.Context, click *entity.Click)
 	return ch(ctx, click)
 }
 
-// storeClickHandler implements ClickHandlerInterface to persist click events to storage
+// storeClickHandler implements ClickHandlerInterface to persist click events to storage.
 type storeClickHandler struct {
 	repo repository.ClicksRepository
 }
