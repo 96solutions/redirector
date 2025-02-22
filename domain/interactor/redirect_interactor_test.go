@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -127,7 +128,7 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	srv, trkRepo, ipAddressParser, _ := makeRedirectInteractor(ctrl)
+	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
@@ -143,10 +144,22 @@ func TestRedirectInteractor_Redirect_WrongGeoError(t *testing.T) {
 		Slug:             expectedSlug,
 		AllowedProtocols: map[string]bool{},
 		AllowedGeos:      map[string]bool{"US": true, "PT": true, "UA": true},
+		CampaignGeoRedirectRules: &valueobject.RedirectRules{
+			RedirectType:      valueobject.NoRedirectType,
+			RedirectURL:       "",
+			RedirectSlug:      "",
+			RedirectSmartSlug: nil,
+		},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
 	ipAddressParser.EXPECT().Parse(expectedDto.IP).Return("PL", nil)
+	userAgentParser.EXPECT().Parse(expectedDto.UserAgent).Return(&valueobject.UserAgent{
+		Bot:      false,
+		Device:   "Mobile",
+		Platform: "Android",
+		Browser:  "Chrome",
+	}, nil)
 
 	rResult, err := srv.Redirect(context.Background(), expectedSlug, expectedDto)
 	if !errors.Is(err, interactor.ErrUnsupportedGeo) {
@@ -178,6 +191,12 @@ func TestRedirectInteractor_Redirect_WrongDeviceError(t *testing.T) {
 		AllowedProtocols: map[string]bool{},
 		AllowedGeos:      map[string]bool{"US": true, "PT": true, "UA": true, "PL": true},
 		AllowedDevices:   map[string]bool{"Desktop": true},
+		CampaignDevicesRedirectRules: &valueobject.RedirectRules{
+			RedirectType:      valueobject.NoRedirectType,
+			RedirectURL:       "",
+			RedirectSlug:      "",
+			RedirectSmartSlug: []string{},
+		},
 	}
 
 	trkRepo.EXPECT().FindTrackingLink(context.Background(), expectedSlug).Return(trkLink)
@@ -206,17 +225,24 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 	clkHandler := interactor.NewStoreClickHandler(clkRepo)
 	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, clkHandler)
 
+	expectedSlug := "testSlug123"
+	expectedSlug2 := "testSlug456"
+	expectedSlug3 := []string{"testSlug000", "testSlug111", "testSlug222"}
+
+	incomeURL, err := url.Parse("http://localhost/" + expectedSlug)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedDto := &dto.RedirectRequestData{
 		RequestID: "someUniqueRequestID",
+		URL:       incomeURL,
 		Params:    make(map[string][]string),
 		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
 	}
-	expectedSlug := "testSlug123"
-	expectedSlug2 := "testSlug456"
-	expectedSlug3 := []string{"testSlug000", "testSlug111", "testSlug222"}
 
 	expectedTargetURL := "http://sometarget.url/TestRedirectInteractor_Redirect_CampaignOveraged"
 
@@ -354,22 +380,18 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 				tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
 				trkRepo.
 					EXPECT().
-					FindTrackingLink(context.Background(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, arg interface{}) *entity.TrackingLink {
+					FindTrackingLink(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_, arg interface{}) *entity.TrackingLink {
+						slug, ok := arg.(string)
+						if !ok {
+							t.Error("invalid argument type. expected string")
+						}
+
 						if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SlugRedirectType {
-							slug, ok := arg.(string)
-							if !ok {
-								t.Error("invalid argument type. expected string")
-							}
 							if slug != expectedSlug2 {
 								t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
 							}
 						} else if tc.trkLink.CampaignOverageRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-							slug, ok := arg.(string)
-							if !ok {
-								t.Error("invalid argument type. expected string")
-							}
-
 							inArray := false
 
 							for _, sl := range expectedSlug3 {
@@ -385,7 +407,7 @@ func TestRedirectInteractor_Redirect_CampaignOveraged(t *testing.T) {
 
 						return &entity.TrackingLink{
 							IsActive:           true,
-							Slug:               expectedSlug,
+							Slug:               slug,
 							AllowedProtocols:   map[string]bool{},
 							AllowedGeos:        map[string]bool{},
 							AllowedDevices:     map[string]bool{},
@@ -427,16 +449,23 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
+	expectedSlug := "testSlug123"
+	expectedSlug2 := "testSlug456"
+	expectedSlug3 := []string{"testSlug000", "testSlug111", "testSlug222"}
+
+	incomeURL, err := url.Parse("http://localhost/" + expectedSlug)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedDto := &dto.RedirectRequestData{
 		Params:    make(map[string][]string),
 		Headers:   make(map[string][]string),
 		UserAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 		IP:        net.ParseIP("178.43.146.107"),
 		Protocol:  "http",
+		URL:       incomeURL,
 	}
-	expectedSlug := "testSlug123"
-	expectedSlug2 := "testSlug456"
-	expectedSlug3 := []string{"testSlug000", "testSlug111", "testSlug222"}
 
 	expectedTargetURL := "http://sometarget.url/TestRedirectInteractor_Redirect_CampaignOveraged"
 
@@ -578,22 +607,18 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 				tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
 				trkRepo.
 					EXPECT().
-					FindTrackingLink(context.Background(), gomock.Any()).
+					FindTrackingLink(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_, arg interface{}) *entity.TrackingLink {
+						slug, ok := arg.(string)
+						if !ok {
+							t.Error("invalid argument type. expected string")
+						}
+
 						if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SlugRedirectType {
-							slug, ok := arg.(string)
-							if !ok {
-								t.Error("invalid argument type. expected string")
-							}
 							if slug != expectedSlug2 {
 								t.Errorf("invalid argument received. expected %s but got %s", expectedSlug2, slug)
 							}
 						} else if tc.trkLink.CampaignDisabledRedirectRules.RedirectType == valueobject.SmartSlugRedirectType {
-							slug, ok := arg.(string)
-							if !ok {
-								t.Error("invalid argument type. expected string")
-							}
-
 							inArray := false
 
 							for _, sl := range expectedSlug3 {
@@ -609,7 +634,7 @@ func TestRedirectInteractor_Redirect_CampaignDisabled(t *testing.T) {
 
 						return &entity.TrackingLink{
 							IsActive:           true,
-							Slug:               expectedSlug,
+							Slug:               slug,
 							AllowedProtocols:   map[string]bool{},
 							AllowedGeos:        map[string]bool{},
 							AllowedDevices:     map[string]bool{},
@@ -651,6 +676,13 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 	clkRepo := mocks.NewMockClicksRepository(ctrl)
 	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl, interactor.NewStoreClickHandler(clkRepo))
 
+	expectedSlug := "testSlug123"
+
+	incomeURL, err := url.Parse("http://localhost/" + expectedSlug)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
 		Headers:   make(map[string][]string),
@@ -659,8 +691,8 @@ func TestRedirectInteractor_Redirect_RenderTokens(t *testing.T) {
 		Protocol:  "http",
 		Referer:   "https://httpbin.org",
 		RequestID: "someUniqueRequestID",
+		URL:       incomeURL,
 	}
-	expectedSlug := "testSlug123"
 	expectedTrkLink := entity.TrackingLink{
 		IsActive:           true,
 		Slug:               expectedSlug,
@@ -870,6 +902,12 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 	defer ctrl.Finish()
 
 	srv, trkRepo, ipAddressParser, userAgentParser := makeRedirectInteractor(ctrl)
+	expectedSlug := "testSlug123"
+
+	incomeURL, err := url.Parse("http://localhost/" + expectedSlug)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expectedDto := &dto.RedirectRequestData{
 		Params:    map[string][]string{"p1": []string{"val1"}, "p2": []string{"val2"}, "p4": []string{"val4"}},
@@ -879,8 +917,8 @@ func TestRedirectInteractor_Redirect_LogErrors(t *testing.T) {
 		Protocol:  "http",
 		Referer:   "https://httpbin.org",
 		RequestID: "someUniqueRequestID",
+		URL:       incomeURL,
 	}
-	expectedSlug := "testSlug123"
 	expectedTrkLink := entity.TrackingLink{
 		IsActive:           true,
 		Slug:               expectedSlug,

@@ -36,6 +36,8 @@ var (
 	ErrTrackingLinkDisabled = errors.New("used tracking link is disabled")
 	// ErrTrackingLinkNotFound is returned when no tracking link is found for the given slug.
 	ErrTrackingLinkNotFound = errors.New("no tracking link was found by slug")
+	// ErrInvalidRedirectRules is returned when the redirect rules are not actually set in the tracking link.
+	ErrInvalidRedirectRules = errors.New("redirect rules are not set in tracking link")
 )
 
 const (
@@ -144,7 +146,7 @@ func (r *redirectInteractor) Redirect(
 	if len(trackingLink.AllowedGeos) > 0 && !trackingLink.AllowedGeos[countryCode] {
 		return r.handleRedirectRules(
 			ctx,
-			trackingLink.CampaignOverageRedirectRules,
+			trackingLink.CampaignGeoRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
@@ -156,7 +158,7 @@ func (r *redirectInteractor) Redirect(
 	if len(trackingLink.AllowedDevices) > 0 && !trackingLink.AllowedDevices[ua.Device] {
 		return r.handleRedirectRules(
 			ctx,
-			trackingLink.CampaignOverageRedirectRules,
+			trackingLink.CampaignDevicesRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
@@ -168,7 +170,7 @@ func (r *redirectInteractor) Redirect(
 	if len(trackingLink.AllowedOS) > 0 && !trackingLink.AllowedOS[ua.Platform] {
 		return r.handleRedirectRules(
 			ctx,
-			trackingLink.CampaignOverageRedirectRules,
+			trackingLink.CampaignOSRedirectRules,
 			requestData,
 			trackingLink,
 			countryCode,
@@ -201,8 +203,8 @@ func (r *redirectInteractor) Redirect(
 		)
 	}
 
-	targetURL := r.renderTokens(trackingLink, requestData, ua, countryCode)
-
+	targetURLTemplate := r.makeRedirectTemplate(trackingLink, requestData)
+	targetURL := r.renderTokens(targetURLTemplate, trackingLink, requestData, ua, countryCode)
 	outputCh := r.registerClick(ctx, slug, targetURL, trackingLink, requestData, ua, countryCode)
 
 	return &dto.RedirectResult{
@@ -220,6 +222,14 @@ func (r *redirectInteractor) handleRedirectRules(
 	userAgent *valueobject.UserAgent,
 	err error,
 ) (*dto.RedirectResult, error) {
+	if rr == nil {
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, ErrInvalidRedirectRules
+	}
+
 	switch rr.RedirectType {
 	case valueobject.LinkRedirectType:
 		return &dto.RedirectResult{
@@ -264,9 +274,13 @@ func (r *redirectInteractor) makeRedirectTemplate(
 	return targetURL
 }
 
-func (r *redirectInteractor) renderTokens(trackingLink *entity.TrackingLink, requestData *dto.RedirectRequestData, ua *valueobject.UserAgent, countryCode string) string {
-	targetURL := r.makeRedirectTemplate(trackingLink, requestData)
-
+func (r *redirectInteractor) renderTokens(
+	targetURL string,
+	trackingLink *entity.TrackingLink,
+	requestData *dto.RedirectRequestData,
+	ua *valueobject.UserAgent,
+	countryCode string,
+) string {
 	tokens := r.tokenRegExp.FindAllString(targetURL, -1)
 	for _, token := range tokens {
 		switch token {
@@ -340,7 +354,6 @@ func (r *redirectInteractor) registerClick(
 		TargetURL:    targetURL,
 		Referer:      requestData.Referer,
 		TrkURL:       requestData.URL.String(),
-		ParentSlug:   ctx.Value("slug").(string),
 		Slug:         slug,
 		TRKLink:      trackingLink,
 		SourceID:     trackingLink.SourceID,
@@ -348,22 +361,28 @@ func (r *redirectInteractor) registerClick(
 		AffiliateID:  trackingLink.AffiliateID,
 		AdvertiserID: trackingLink.AdvertiserID,
 		IsParallel:   false,
-		LandingID:    requestData.Params["landing"][0],
-		GCLID:        requestData.Params["gclid"][0],
 		UserAgent:    ua,
 		Agent:        ua.SrcString,
 		Platform:     ua.Platform,
 		Browser:      ua.Browser,
 		Device:       ua.Device,
 		IP:           requestData.IP,
-		//Region:       "",
-		CountryCode: countryCode,
-		//City:         "",
-		P1:        strings.Join(requestData.GetParam("p1"), ","),
-		P2:        strings.Join(requestData.GetParam("p2"), ","),
-		P3:        strings.Join(requestData.GetParam("p3"), ","),
-		P4:        strings.Join(requestData.GetParam("p4"), ","),
-		CreatedAt: time.Now(),
+		CountryCode:  countryCode,
+		P1:           strings.Join(requestData.GetParam("p1"), ","),
+		P2:           strings.Join(requestData.GetParam("p2"), ","),
+		P3:           strings.Join(requestData.GetParam("p3"), ","),
+		P4:           strings.Join(requestData.GetParam("p4"), ","),
+		CreatedAt:    time.Now(),
+	}
+
+	if ctx.Value("slug") != nil {
+		click.ParentSlug = ctx.Value("slug").(string)
+	}
+	if lps, ok := requestData.Params["landing"]; ok && len(lps) > 0 {
+		click.LandingID = requestData.Params["landing"][0]
+	}
+	if gclid, ok := requestData.Params["gclid"]; ok && len(gclid) > 0 {
+		click.GCLID = requestData.Params["gclid"][0]
 	}
 
 	outputs := make([]<-chan *dto.ClickProcessingResult, len(r.clickHandlers))
