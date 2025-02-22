@@ -1,3 +1,4 @@
+// Package cmd contains application commands and their implementations.
 package cmd
 
 import (
@@ -7,9 +8,11 @@ import (
 )
 
 // configCmd represents the config command.
+// It displays the current application configuration in a human-readable format.
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Show application configuration",
+	Short: "Show application configuration.",
+	Long:  `Display the current application configuration including all settings from environment variables and config files.`,
 	Run: func(_ *cobra.Command, args []string) {
 		cfg := config.GetConfig()
 

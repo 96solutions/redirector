@@ -1,3 +1,4 @@
+// Package cmd contains application commands and their implementations.
 package cmd
 
 import (
@@ -10,10 +11,13 @@ import (
 )
 
 // serveCmd represents the serve command.
+// It starts the HTTP server and begins handling redirect requests.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start HTTP server",
-	Long:  `Start HTTP server`,
+	Short: "Start HTTP server.",
+	Long: `Start the HTTP server and begin handling redirect requests.
+The server will listen on the configured host and port, processing
+redirect rules according to the application configuration.`,
 	Run: func(_ *cobra.Command, args []string) {
 		reg := registry.NewRegistry(config.GetConfig())
 
@@ -27,6 +31,7 @@ var serveCmd = &cobra.Command{
 	},
 }
 
+// init adds the serve command to the root command and sets up any serve-specific flags.
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
