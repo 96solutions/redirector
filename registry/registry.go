@@ -16,6 +16,7 @@ import (
 	"github.com/lroman242/redirector/infrastructure/storage"
 	"github.com/lroman242/redirector/infrastructure/transport/http"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/redis/go-redis/v9"
 )
 
 // Registry provides factory methods for creating the main application components.
@@ -25,14 +26,16 @@ type Registry interface {
 	NewService() interactor.RedirectInteractor
 	// NewServer creates and configures the HTTP server
 	NewServer() *server.Server
-	// NewDB initializes the database connection
-	NewDB() *sql.DB
 	// NewIPAddressParser creates a service for parsing IP addresses
 	NewIPAddressParser() service.IPAddressParserInterface
 	// NewUserAgentParser creates a service for parsing User-Agent strings
 	NewUserAgentParser() service.UserAgentParserInterface
 	// NewTrackingLinksRepository creates a repository for managing tracking links
 	NewTrackingLinksRepository() repository.TrackingLinksRepositoryInterface
+	// NewRedisClient creates a new Redis client
+	NewRedisClient() *redis.Client
+	// NewDB initializes the database connection
+	NewDB() *sql.DB
 }
 
 // registry implements Registry interface and manages application component initialization
@@ -135,4 +138,23 @@ func (r *registry) NewTrackingLinksRepository() repository.TrackingLinksReposito
 func (r *registry) NewLogger() *slog.Logger {
 	slog.Info("initializing logger...")
 	return logger.NewLogger(r.conf.LogConf)
+}
+
+// NewRedisClient creates a new Redis client
+func (r *registry) NewRedisClient() *redis.Client {
+	return redis.NewClient(
+		// Options contains Redis client options based on the configuration
+		&redis.Options{
+			Addr:            r.conf.RedisConf.Addr(),
+			Password:        r.conf.RedisConf.Password,
+			DB:              r.conf.RedisConf.DB,
+			MaxRetries:      r.conf.RedisConf.MaxRetries,
+			MinRetryBackoff: time.Duration(r.conf.RedisConf.MinRetryBackoff) * time.Millisecond,
+			MaxRetryBackoff: time.Duration(r.conf.RedisConf.MaxRetryBackoff) * time.Millisecond,
+			DialTimeout:     time.Duration(r.conf.RedisConf.DialTimeout) * time.Second,
+			ReadTimeout:     time.Duration(r.conf.RedisConf.ReadTimeout) * time.Second,
+			WriteTimeout:    time.Duration(r.conf.RedisConf.WriteTimeout) * time.Second,
+			PoolSize:        r.conf.RedisConf.PoolSize,
+			PoolTimeout:     time.Duration(r.conf.RedisConf.PoolTimeout) * time.Second,
+		})
 }

@@ -13,12 +13,19 @@ import (
 var lock = &sync.Mutex{}
 var applicationConfig *AppConfig
 
-// AppConfig type represents application config.
+// AppConfig represents the complete application configuration.
+// It aggregates all sub-configurations for different components.
 type AppConfig struct {
-	DBConf         *DBConf
+	// DBConf contains database connection settings
+	DBConf *DBConf
+	// HTTPServerConf contains HTTP server settings
 	HTTPServerConf *HTTPServerConf
-	LogConf        *LoggerConf
+	// LogConf contains logging configuration
+	LogConf *LoggerConf
+	// RedisConf contains Redis connection settings
+	RedisConf *RedisConf
 
+	// GeoIP2DBPath is the path to the GeoIP2 database file
 	GeoIP2DBPath string `mapstructure:"geoip2_db_path"`
 }
 
@@ -74,6 +81,9 @@ func initConfig() *AppConfig {
 	}
 	if err := viper.Unmarshal(&cfg.LogConf); err != nil {
 		panic(fmt.Errorf("cannot unmarshal LogConf. error: %w", err))
+	}
+	if err := viper.Unmarshal(&cfg.RedisConf); err != nil {
+		panic(fmt.Errorf("cannot unmarshal RedisConf. error: %w", err))
 	}
 	if err := viper.Unmarshal(&cfg); err != nil {
 		panic(fmt.Errorf("cannot unmarshal GeoIP2DBPath. error: %w", err))
