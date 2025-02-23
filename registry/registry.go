@@ -61,6 +61,8 @@ func (r *registry) NewService() interactor.RedirectInteractor {
 	slog.Info("initializing RedirectInteractor....")
 	clickHandlers := make([]interactor.ClickHandlerInterface, 0)
 
+	//clickHandlers = append(clickHandlers, click_handlers.NewClickHandlerWithMetrics(/* ... create some click handler*/))
+
 	return interactor.NewRedirectInteractor(
 		r.NewTrackingLinksRepository(),
 		r.NewIPAddressParser(),

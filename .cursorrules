@@ -33,7 +33,7 @@ step 7: repeat the process until the error is fixed.
 .env file is located in the root of the project.
 
 #PROJECT STRUCTURE
-tree -L 4 -a -I '.idea|.git|mocks|docker|GeoLite2-Country.mmdb|.vscode|.DS_Store'
+tree -L 4 -a -I '.idea|.git|mocks|docker|GeoLite2-Country.mmdb|.vscode|.DS_Store|bin'
 
 #IMPORTANT
 - Finish comments with a dot.
