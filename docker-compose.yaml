@@ -161,9 +161,27 @@ services:
     depends_on:
       - prometheus
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"   # HTTP port
+      - "9000:9000"   # Native client port
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-default}
+#    ulimits:
+#      nofile:
+#        soft: 262144
+#        hard: 262144
+
 volumes:
   psql-storage:
   opensearch-data1:
   opensearch-data2:
   prometheus-data:
   grafana-data:
+  clickhouse-data:

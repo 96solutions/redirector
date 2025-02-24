@@ -1,9 +1,11 @@
 package service
 
 import (
-	"github.com/lroman242/redirector/domain/service"
+	"errors"
+	"fmt"
 	"net"
 
+	"github.com/lroman242/redirector/domain/service"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -19,9 +21,13 @@ func NewGeoIP2(db *geoip2.Reader) service.IPAddressParserInterface {
 
 // Parse function parses country code from the provided IP address.
 func (g *GeoIP2) Parse(ip net.IP) (string, error) {
+	if ip == nil {
+		return "", errors.New("ip address cannot be nil")
+	}
+
 	record, err := g.db.Country(ip)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get country from IP: %w", err)
 	}
 
 	return record.Country.IsoCode, nil

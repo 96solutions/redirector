@@ -12,6 +12,10 @@ import (
 	"github.com/lroman242/redirector/infrastructure/metrics"
 )
 
+const (
+	HandlerStoreClick = "store_click_handler"
+)
+
 // ClickHandlerWithMetrics wraps a ClickHandlerInterface implementation
 // and adds Prometheus metrics tracking for click processing duration.
 type ClickHandlerWithMetrics struct {
@@ -29,7 +33,7 @@ func NewClickHandlerWithMetrics(handler interactor.ClickHandlerInterface) intera
 // It delegates the actual click processing to the wrapped handler while measuring
 // the time taken to process the click.
 func (h *ClickHandlerWithMetrics) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
-	handlerName := "store_click_handler"
+	handlerName := HandlerStoreClick
 	start := time.Now()
 	defer func() {
 		metrics.ClickHandlerDuration.WithLabelValues(handlerName).Observe(time.Since(start).Seconds())
