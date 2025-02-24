@@ -8,6 +8,7 @@ import (
 	"github.com/ua-parser/uap-go/uaparser"
 )
 
+// ErrEmptyUserAgent is returned when the provided User-Agent string is empty.
 var ErrEmptyUserAgent = errors.New("provided empty user agent")
 
 // UserAgentParser implements service.UserAgentParserInterface.

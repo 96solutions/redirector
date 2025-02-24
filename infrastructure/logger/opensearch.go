@@ -10,14 +10,14 @@ import (
 	"github.com/opensearch-project/opensearch-go/opensearchapi"
 )
 
-// OpenSearchWriter is custom type that implements the Write method/interface
-// for logging directly to Opensearch, without the help of logstash.
+// OpenSearchWriter is a custom type that implements the Write method/interface
+// for logging directly to OpenSearch, without the help of Logstash.
 type OpenSearchWriter struct {
 	Client *opensearch.Client
 	index  string
 }
 
-// NewOpenSearchWriter func creates instance of OpenSearchWriter which can be used to logging.
+// NewOpenSearchWriter creates an instance of OpenSearchWriter which can be used for logging.
 func NewOpenSearchWriter(host, port, indexName, user, pass string) (*OpenSearchWriter, error) {
 	client, err := opensearch.NewClient(opensearch.Config{
 		Transport: &http.Transport{
@@ -31,7 +31,7 @@ func NewOpenSearchWriter(host, port, indexName, user, pass string) (*OpenSearchW
 	return &OpenSearchWriter{Client: client, index: indexName}, err
 }
 
-// Write 'method' to write directly to opensearch.
+// Write method to write logs directly to OpenSearch.
 func (ow *OpenSearchWriter) Write(p []byte) (n int, err error) {
 	req := opensearchapi.IndexRequest{
 		Index: ow.index,
