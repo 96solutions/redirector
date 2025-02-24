@@ -1,4 +1,5 @@
-// Package cmd contains application commands and their implementations.
+// Package cmd contains the command-line interface implementations for the redirector service.
+// It provides commands for testing redirect rules, viewing configuration, and managing the service.
 package cmd
 
 import (
