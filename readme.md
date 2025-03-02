@@ -5,16 +5,17 @@
   - Save click to storage (clickhouse)
   - gRPC call
 - Add health check
-- Add metrics (prometheus)
 - Add homepage
 - Extend redirector functionality
   - deeplinking
   - landing pages
   - transparent redirection
   - parallel tracking
-  - slug counter
 - CI/CD
   - K8 + Helm
   - Github Actions
   - AWS / GCP
-- Open API / Swagger
+- Performance Improvements
+  - EasyJSON
+  - Redis cache
+  - Clickhouse storage
