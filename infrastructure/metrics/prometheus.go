@@ -7,6 +7,16 @@ import (
 )
 
 var (
+	// Cache metrics
+	// TODO:
+	CacheOperations = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "redirective_cache_operations_total",
+			Help: "Total number of cache operations",
+		},
+		[]string{"slug", "result"}, // slug: incoming slug, result: hit/miss
+	)
+
 	// RedirectTotal tracks the total number of handled redirects.
 	RedirectTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "redirector_redirects_total",

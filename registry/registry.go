@@ -63,12 +63,14 @@ func (r *registry) NewService() interactor.RedirectInteractor {
 
 	//clickHandlers = append(clickHandlers, click_handlers.NewClickHandlerWithMetrics(/* ... create some click handler*/))
 
-	return interactor.NewRedirectInteractor(
+	redirectInteractor := interactor.NewRedirectInteractor(
 		r.NewTrackingLinksRepository(),
 		r.NewIPAddressParser(),
 		r.NewUserAgentParser(),
 		clickHandlers,
 	)
+
+	return serviceImpl.NewRedirectWithMetrics(redirectInteractor)
 }
 
 // NewServer func creates an instance of new Server (HTTP).

@@ -1,3 +1,5 @@
+// Package service provides implementations of domain service interfaces and additional
+// service wrappers for metrics, caching, and other cross-cutting concerns.
 package service
 
 import (
@@ -11,19 +13,25 @@ import (
 // ErrEmptyUserAgent is returned when the provided User-Agent string is empty.
 var ErrEmptyUserAgent = errors.New("provided empty user agent")
 
-// UserAgentParser implements service.UserAgentParserInterface.
+// UserAgentParser implements service.UserAgentParserInterface using the ua-parser library.
+// It provides functionality to parse User-Agent strings and extract device, platform,
+// and browser information.
 type UserAgentParser struct {
+	// Parser is the underlying ua-parser implementation
 	*uaparser.Parser
 }
 
-// NewUserAgentParser func creates new instance of UserAgentParser.
+// NewUserAgentParser creates a new UserAgentParser instance using the default
+// ua-parser patterns database.
 func NewUserAgentParser() service.UserAgentParserInterface {
 	return &UserAgentParser{
 		uaparser.NewFromSaved(),
 	}
 }
 
-// Parse function parses data about used device from User-Agent header.
+// Parse analyzes a User-Agent string and returns structured information about
+// the client's device, platform, and browser. Returns ErrEmptyUserAgent if
+// the provided string is empty.
 func (p *UserAgentParser) Parse(userAgent string) (*valueobject.UserAgent, error) {
 	ua := new(valueobject.UserAgent)
 

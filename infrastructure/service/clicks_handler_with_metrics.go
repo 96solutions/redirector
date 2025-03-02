@@ -1,6 +1,6 @@
-// Package click_handlers provides implementations of click event handlers
-// with additional functionality like metrics tracking.
-package click_handlers
+// Package service provides implementations of domain service interfaces and additional
+// service wrappers for metrics, caching, and other cross-cutting concerns.
+package service
 
 import (
 	"context"
@@ -12,31 +12,28 @@ import (
 	"github.com/lroman242/redirector/infrastructure/metrics"
 )
 
-const (
-	HandlerStoreClick = "store_click_handler"
-)
-
 // ClickHandlerWithMetrics wraps a ClickHandlerInterface implementation
 // and adds Prometheus metrics tracking for click processing duration.
 type ClickHandlerWithMetrics struct {
-	// ClickHandlerInterface is the wrapped click handler implementation.
+	// Handler is the wrapped click handler implementation
 	interactor.ClickHandlerInterface
+	// handlerName is used as a label in metrics to identify the handler
+	handlerName string
 }
 
 // NewClickHandlerWithMetrics creates a new ClickHandlerWithMetrics instance
 // that decorates the provided handler with metrics tracking functionality.
-func NewClickHandlerWithMetrics(handler interactor.ClickHandlerInterface) interactor.ClickHandlerInterface {
-	return &ClickHandlerWithMetrics{handler}
+func NewClickHandlerWithMetrics(handler interactor.ClickHandlerInterface, handlerName string) interactor.ClickHandlerInterface {
+	return &ClickHandlerWithMetrics{handler, handlerName}
 }
 
 // HandleClick processes a click event and tracks its duration using Prometheus metrics.
 // It delegates the actual click processing to the wrapped handler while measuring
 // the time taken to process the click.
 func (h *ClickHandlerWithMetrics) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
-	handlerName := HandlerStoreClick
 	start := time.Now()
 	defer func() {
-		metrics.ClickHandlerDuration.WithLabelValues(handlerName).Observe(time.Since(start).Seconds())
+		metrics.ClickHandlerDuration.WithLabelValues(h.handlerName).Observe(time.Since(start).Seconds())
 	}()
 
 	return h.ClickHandlerInterface.HandleClick(ctx, click)
