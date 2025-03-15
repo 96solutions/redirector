@@ -73,3 +73,6 @@ compilefull:
 .PHONY: dockercompile
 dockercompile:
 	@docker run --name redirector_builder --rm --interactive --tty --volume $(CURRENT_DIR):/usr/src/app -w /usr/src/app -u $(id -u):$(id -g) golang:1.23 make compilefull
+
+
+docker run --rm -it -u $(id -u):$(id -g) -v $PWD:/var/www -w /var/www claud-code claude

@@ -42,4 +42,16 @@ var (
 		Help:    "The time taken to process clicks by handler.",
 		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
 	}, []string{"handler"})
+
+	// ClicksTotal tracks the total number of processed clicks.
+	ClicksTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "redirector_clicks_total",
+		Help: "The total number of processed clicks.",
+	})
+
+	// ClicksProcessed tracks the number of clicks processed with status.
+	ClicksProcessed = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "redirector_clicks_processed_total",
+		Help: "The total number of clicks processed by status.",
+	}, []string{"status"}) // status: success, error, timeout
 )

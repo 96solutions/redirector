@@ -138,15 +138,20 @@ func (rh *RedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case result, ok := <-redirectResult.OutputCh:
 				slog.Debug("redirect result", slog.String("slug", slug), "result", result, slog.Bool("isClosed", !ok))
 				if !ok {
+					metrics.ClicksProcessed.WithLabelValues("canceled").Inc()
 					slog.Debug("Click processing complete", slog.String("slug", slug))
 					return
 				}
+
 				if result.Err != nil {
+					metrics.ClicksProcessed.WithLabelValues("error").Inc()
 					slog.Error("Click processing failed",
 						slog.String("error", result.Err.Error()),
 						slog.String("slug", slug),
 						slog.Any("request", data),
 					)
+				} else {
+					metrics.ClicksProcessed.WithLabelValues("success").Inc()
 				}
 			}
 		}

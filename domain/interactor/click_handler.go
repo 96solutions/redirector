@@ -3,6 +3,8 @@ package interactor
 
 import (
 	"context"
+	"log/slog"
+	"time"
 
 	"github.com/lroman242/redirector/domain/dto"
 	"github.com/lroman242/redirector/domain/entity"
@@ -44,23 +46,60 @@ func NewStoreClickHandler(clkRepository repository.ClicksRepository) ClickHandle
 func (sch *storeClickHandler) HandleClick(ctx context.Context, click *entity.Click) <-chan *dto.ClickProcessingResult {
 	output := make(chan *dto.ClickProcessingResult)
 
-	go func(ctx context.Context, click *entity.Click) {
-		defer close(output)
+	// Create a child context for better traceability
+	childCtx, cancel := context.WithCancel(ctx)
+
+	slog.Debug("processing click",
+		slog.String("click_id", click.ID),
+		slog.String("slug", click.Slug),
+	)
+
+	go func(ctx context.Context, click *entity.Click, cancelFunc context.CancelFunc) {
+		startTime := time.Now()
+		defer func() {
+			// Ensure we clean up resources
+			close(output)
+			cancelFunc()
+			slog.Debug("click processing completed",
+				slog.String("click_id", click.ID),
+				slog.String("duration", time.Since(startTime).String()),
+			)
+		}()
+
 		// Add context cancellation handling
 		select {
 		case <-ctx.Done():
+			err := ctx.Err()
+			slog.Error("click processing cancelled",
+				slog.String("click_id", click.ID),
+				slog.String("error", err.Error()),
+			)
 			output <- &dto.ClickProcessingResult{
 				Click: click,
-				Err:   ctx.Err(),
+				Err:   err,
 			}
 			return
 		default:
+			// Save the click in the repository
+			err := sch.repo.Save(ctx, click)
+			if err != nil {
+				slog.Error("failed to save click",
+					slog.String("click_id", click.ID),
+					slog.String("error", err.Error()),
+				)
+			} else {
+				slog.Debug("click saved successfully",
+					slog.String("click_id", click.ID),
+					slog.String("duration", time.Since(startTime).String()),
+				)
+			}
+
 			output <- &dto.ClickProcessingResult{
 				Click: click,
-				Err:   sch.repo.Save(ctx, click),
+				Err:   err,
 			}
 		}
-	}(ctx, click)
+	}(childCtx, click, cancel)
 
 	return output
 }
