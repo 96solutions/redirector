@@ -11,6 +11,7 @@
   - landing pages
   - transparent redirection
   - parallel tracking
+  - use publisher ID + campaign ID (source id optional) instead of slug
 - CI/CD
   - K8 + Helm
   - Github Actions

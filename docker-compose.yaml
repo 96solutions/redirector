@@ -129,7 +129,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - docker/prometheus:/etc/prometheus
+      - ./docker/prometheus:/etc/prometheus
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -140,9 +140,9 @@ services:
     links:
       - app
       - dev
-    depends_on:
-      - app
-      - dev
+#    depends_on:
+#      - app
+#      - dev
 
   grafana:
     image: grafana/grafana:latest
@@ -155,11 +155,15 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana-data:/var/lib/grafana
-      - .docker/grafana/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
     links:
       - prometheus
+      - clickhouse
+      - db
     depends_on:
       - prometheus
+      - clickhouse
+      - db
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
