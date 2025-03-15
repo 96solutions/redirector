@@ -65,6 +65,9 @@ const (
 	unknownStrValue = "unknown"
 
 	randomStringLen = 32
+
+	randomMinInt = 10000
+	randomMaxInt = 99999999
 )
 
 //go:generate mockgen -package=mocks -destination=mocks/mock_redirect_interactor.go -source=redirect_interactor.go RedirectInteractor
@@ -323,7 +326,7 @@ func (r *redirectInteractor) renderTokens(
 		case randomStrToken:
 			targetURL = strings.ReplaceAll(targetURL, token, randString(randomStringLen))
 		case randomIntToken:
-			targetURL = strings.ReplaceAll(targetURL, token, strconv.Itoa(rand.Intn(99999999-10000)+10000))
+			targetURL = strings.ReplaceAll(targetURL, token, strconv.Itoa(rand.Intn(randomMaxInt-randomMinInt)+randomMinInt))
 		case deviceToken:
 			targetURL = strings.ReplaceAll(targetURL, token, ua.Device)
 		case platformToken:

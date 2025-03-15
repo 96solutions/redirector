@@ -10,9 +10,10 @@ import (
 )
 
 func TestGeoIP2_Parse(t *testing.T) {
-	reader, err := geoip2.Open("./../../GeoLite2-Country.mmdb")
+	reader, err := geoip2.Open("./../../docker/GeoLite2-Country.mmdb")
 	if err != nil {
-		t.Errorf("cannot initialize GeoIP parser")
+		t.Error("failed to open GeoLite2-Country.mmdb")
+		t.FailNow()
 	}
 
 	geoIPParser := service.NewGeoIP2(reader)

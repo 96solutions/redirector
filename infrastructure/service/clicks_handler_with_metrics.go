@@ -34,6 +34,7 @@ func (h *ClickHandlerWithMetrics) HandleClick(ctx context.Context, click *entity
 	start := time.Now()
 	defer func() {
 		metrics.ClickHandlerDuration.WithLabelValues(h.handlerName).Observe(time.Since(start).Seconds())
+		metrics.ClicksTotal.Inc()
 	}()
 
 	return h.ClickHandlerInterface.HandleClick(ctx, click)

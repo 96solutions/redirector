@@ -1079,6 +1079,324 @@ func TestRedirectInteractor_Redirect_OSValidation(t *testing.T) {
 	}
 }
 
+func TestRedirectInteractor_Redirect_WithLandingPage(t *testing.T) {
+	ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+	defer ctrl.Finish()
+
+	td := newTestData()
+
+	// Create a copy of data and add 'landing' parameter
+	landingPage := "landing123"
+	landingURLTemplate := "https://landing.example.com/special-page"
+
+	td.requestData.Params["landing"] = []string{landingPage}
+
+	trkLink := &entity.TrackingLink{
+		IsActive:           true,
+		IsCampaignActive:   true,
+		IsCampaignOveraged: false,
+		TargetURLTemplate:  "https://example.com/default-page",
+		AllowedProtocols:   make(entity.AllowedListType),
+		AllowedGeos:        make(entity.AllowedListType),
+		AllowedDevices:     make(entity.AllowedListType),
+		LandingPages: map[string]*entity.LandingPage{
+			landingPage: {
+				ID:        "landing-id-123",
+				TargetURL: landingURLTemplate,
+			},
+		},
+	}
+
+	// Configure mocks
+	trkRepo.EXPECT().
+		FindTrackingLink(gomock.Any(), td.slug).
+		Return(trkLink)
+
+	uaParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.userAgent, nil)
+
+	ipParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.countryCode, nil)
+
+	clkRepo.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+			if click.TargetURL != landingURLTemplate {
+				t.Errorf("Expected target URL to be %s, got %s", landingURLTemplate, click.TargetURL)
+			}
+			if click.LandingID != landingPage {
+				t.Errorf("Expected LandingID to be %s, got %s", landingPage, click.LandingID)
+			}
+			return nil
+		})
+
+	// Execute test
+	result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Verify correct URL is returned
+	if result.TargetURL != landingURLTemplate {
+		t.Errorf("Expected target URL %s, got %s", landingURLTemplate, result.TargetURL)
+	}
+
+	// Wait for processing to complete
+	<-result.OutputCh
+}
+
+func TestRedirectInteractor_Redirect_WithDeeplink(t *testing.T) {
+	ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+	defer ctrl.Finish()
+
+	td := newTestData()
+
+	// Create a copy of data and add 'deeplink' parameter
+	deeplinkURL := "app://example.com/specific-page"
+	td.requestData.Params["deeplink"] = []string{deeplinkURL}
+
+	trkLink := &entity.TrackingLink{
+		IsActive:           true,
+		IsCampaignActive:   true,
+		IsCampaignOveraged: false,
+		TargetURLTemplate:  "https://example.com/default-page",
+		AllowedProtocols:   make(entity.AllowedListType),
+		AllowedGeos:        make(entity.AllowedListType),
+		AllowedDevices:     make(entity.AllowedListType),
+		AllowDeeplink:      true,
+	}
+
+	// Configure mocks
+	trkRepo.EXPECT().
+		FindTrackingLink(gomock.Any(), td.slug).
+		Return(trkLink)
+
+	uaParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.userAgent, nil)
+
+	ipParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.countryCode, nil)
+
+	clkRepo.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+			if click.TargetURL != deeplinkURL {
+				t.Errorf("Expected target URL to be %s, got %s", deeplinkURL, click.TargetURL)
+			}
+			return nil
+		})
+
+	// Execute test
+	result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Verify correct URL is returned
+	if result.TargetURL != deeplinkURL {
+		t.Errorf("Expected target URL %s, got %s", deeplinkURL, result.TargetURL)
+	}
+
+	// Wait for processing to complete
+	<-result.OutputCh
+}
+
+func TestRedirectInteractor_Redirect_WithDeeplinkDisabled(t *testing.T) {
+	ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+	defer ctrl.Finish()
+
+	td := newTestData()
+
+	// Create a copy of data and add 'deeplink' parameter
+	deeplinkURL := "app://example.com/specific-page"
+	td.requestData.Params["deeplink"] = []string{deeplinkURL}
+
+	defaultURL := "https://example.com/default-page"
+	trkLink := &entity.TrackingLink{
+		IsActive:           true,
+		IsCampaignActive:   true,
+		IsCampaignOveraged: false,
+		TargetURLTemplate:  defaultURL,
+		AllowedProtocols:   make(entity.AllowedListType),
+		AllowedGeos:        make(entity.AllowedListType),
+		AllowedDevices:     make(entity.AllowedListType),
+		AllowDeeplink:      false, // Deeplink is disabled
+	}
+
+	// Configure mocks
+	trkRepo.EXPECT().
+		FindTrackingLink(gomock.Any(), td.slug).
+		Return(trkLink)
+
+	uaParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.userAgent, nil)
+
+	ipParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.countryCode, nil)
+
+	clkRepo.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+			if click.TargetURL != defaultURL {
+				t.Errorf("Expected target URL to be %s, got %s", defaultURL, click.TargetURL)
+			}
+			return nil
+		})
+
+	// Execute test
+	result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Verify correct URL is returned (should be default, not deeplink)
+	if result.TargetURL != defaultURL {
+		t.Errorf("Expected target URL %s, got %s", defaultURL, result.TargetURL)
+	}
+
+	// Wait for processing to complete
+	<-result.OutputCh
+}
+
+func TestRedirectInteractor_Redirect_WithGCLID(t *testing.T) {
+	ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+	defer ctrl.Finish()
+
+	td := newTestData()
+
+	// Add GCLID parameter
+	gclidValue := "12345abcde"
+	td.requestData.Params["gclid"] = []string{gclidValue}
+
+	defaultURL := "https://example.com/default-page"
+	trkLink := &entity.TrackingLink{
+		IsActive:           true,
+		IsCampaignActive:   true,
+		IsCampaignOveraged: false,
+		TargetURLTemplate:  defaultURL,
+		AllowedProtocols:   make(entity.AllowedListType),
+		AllowedGeos:        make(entity.AllowedListType),
+		AllowedDevices:     make(entity.AllowedListType),
+	}
+
+	// Configure mocks
+	trkRepo.EXPECT().
+		FindTrackingLink(gomock.Any(), td.slug).
+		Return(trkLink)
+
+	uaParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.userAgent, nil)
+
+	ipParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.countryCode, nil)
+
+	clkRepo.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+			if click.GCLID != gclidValue {
+				t.Errorf("Expected click.GCLID to be %s, got %s", gclidValue, click.GCLID)
+			}
+			return nil
+		})
+
+	// Execute test
+	result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Note: Currently the code has a TODO to append gclid param to target URL
+	// This test checks that it's set in the click entity at least
+
+	// Wait for processing to complete
+	<-result.OutputCh
+}
+
+func TestRedirectInteractor_Redirect_WithMultipleParams(t *testing.T) {
+	ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+	defer ctrl.Finish()
+
+	td := newTestData()
+
+	// Add multiple parameters
+	landingPage := "landing456"
+	landingURLTemplate := "https://landing.example.com/promo-page"
+	gclidValue := "67890abcde"
+	deeplinkURL := "app://example.com/deep-page"
+
+	td.requestData.Params["landing"] = []string{landingPage}
+	td.requestData.Params["gclid"] = []string{gclidValue}
+	td.requestData.Params["deeplink"] = []string{deeplinkURL}
+
+	trkLink := &entity.TrackingLink{
+		IsActive:           true,
+		IsCampaignActive:   true,
+		IsCampaignOveraged: false,
+		TargetURLTemplate:  "https://example.com/default-page",
+		AllowedProtocols:   make(entity.AllowedListType),
+		AllowedGeos:        make(entity.AllowedListType),
+		AllowedDevices:     make(entity.AllowedListType),
+		AllowDeeplink:      true,
+		LandingPages: map[string]*entity.LandingPage{
+			landingPage: {
+				ID:        "landing-id-456",
+				TargetURL: landingURLTemplate,
+			},
+		},
+	}
+
+	// Configure mocks
+	trkRepo.EXPECT().
+		FindTrackingLink(gomock.Any(), td.slug).
+		Return(trkLink)
+
+	uaParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.userAgent, nil)
+
+	ipParser.EXPECT().
+		Parse(gomock.Any()).
+		Return(td.countryCode, nil)
+
+	clkRepo.EXPECT().
+		Save(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, click *entity.Click) error {
+			if click.LandingID != landingPage {
+				t.Errorf("Expected LandingID to be %s, got %s", landingPage, click.LandingID)
+			}
+			if click.GCLID != gclidValue {
+				t.Errorf("Expected GCLID to be %s, got %s", gclidValue, click.GCLID)
+			}
+			// The deeplink should override the landing page URL
+			if click.TargetURL != deeplinkURL {
+				t.Errorf("Expected TargetURL to be %s, got %s", deeplinkURL, click.TargetURL)
+			}
+			return nil
+		})
+
+	// Execute test
+	result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// The deeplink should override the landing page URL
+	if result.TargetURL != deeplinkURL {
+		t.Errorf("Expected target URL %s, got %s", deeplinkURL, result.TargetURL)
+	}
+
+	// Wait for processing to complete
+	<-result.OutputCh
+}
+
 // TestRedirectInteractor_Redirect_TokenReplacement tests the token replacement functionality
 func TestRedirectInteractor_Redirect_TokenReplacement(t *testing.T) {
 	t.Parallel()
@@ -1171,6 +1489,132 @@ func TestRedirectInteractor_Redirect_TokenReplacement(t *testing.T) {
 			expectedURL := fmt.Sprintf("%s?value=%s", tt.targetURLTemplate, tt.expectedValue)
 			if result.TargetURL != expectedURL {
 				t.Errorf("expected URL %s, got %s", expectedURL, result.TargetURL)
+			}
+		})
+	}
+}
+
+// TestRedirectInteractor_Redirect_RandomStrTokenReplacement tests the {random_str} token replacement.
+func TestRedirectInteractor_Redirect_RandomStrTokenReplacement(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		token string
+	}{
+		{
+			name:  "random str token",
+			token: "{random_str}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+			defer ctrl.Finish()
+
+			td := newTestData()
+
+			trkLink := &entity.TrackingLink{
+				IsActive:           true,
+				IsCampaignActive:   true,
+				IsCampaignOveraged: false,
+				TargetURLTemplate:  tt.token,
+				AllowedProtocols:   make(entity.AllowedListType),
+				AllowedGeos:        make(entity.AllowedListType),
+				AllowedDevices:     make(entity.AllowedListType),
+			}
+
+			// Configure mocks
+			trkRepo.EXPECT().
+				FindTrackingLink(gomock.Any(), td.slug).
+				Return(trkLink)
+
+			uaParser.EXPECT().
+				Parse(gomock.Any()).
+				Return(td.userAgent, nil)
+
+			ipParser.EXPECT().
+				Parse(gomock.Any()).
+				Return(td.countryCode, nil)
+
+			clkRepo.EXPECT().
+				Save(gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+
+			// Execute test
+			result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if len(result.TargetURL) != 32 {
+				t.Errorf("unexpected random string length. expected %d, but got %d", len(result.TargetURL), 32)
+			}
+		})
+	}
+}
+
+// TestRedirectInteractor_Redirect_RandomIntTokenReplacement tests the {random_int} token replacement.
+func TestRedirectInteractor_Redirect_RandomIntTokenReplacement(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		token string
+	}{
+		{
+			name:  "random int token",
+			token: "{random_int}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl, srv, trkRepo, ipParser, uaParser, clkRepo := setupTest(t)
+			defer ctrl.Finish()
+
+			td := newTestData()
+
+			trkLink := &entity.TrackingLink{
+				IsActive:           true,
+				IsCampaignActive:   true,
+				IsCampaignOveraged: false,
+				TargetURLTemplate:  tt.token,
+				AllowedProtocols:   make(entity.AllowedListType),
+				AllowedGeos:        make(entity.AllowedListType),
+				AllowedDevices:     make(entity.AllowedListType),
+			}
+
+			// Configure mocks
+			trkRepo.EXPECT().
+				FindTrackingLink(gomock.Any(), td.slug).
+				Return(trkLink)
+
+			uaParser.EXPECT().
+				Parse(gomock.Any()).
+				Return(td.userAgent, nil)
+
+			ipParser.EXPECT().
+				Parse(gomock.Any()).
+				Return(td.countryCode, nil)
+
+			clkRepo.EXPECT().
+				Save(gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+
+			// Execute test
+			result, err := srv.Redirect(context.Background(), td.slug, td.requestData)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			i, err := strconv.Atoi(result.TargetURL)
+			if err != nil {
+				t.Errorf("invalid random integer %s: %v", err, result.TargetURL)
+			}
+			if i <= 10000 || i >= 99999999 {
+				t.Errorf("unexpected random int. expected to be between 10000 and 99999999, but got %s", result.TargetURL)
 			}
 		})
 	}
