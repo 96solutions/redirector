@@ -9,9 +9,8 @@ on:
     inputs:
       tag:
         description: 'Docker image tag'
-        required: false
+        required: true
         type: string
-        default: ${{ github.sha }}
 
 env:
   REGISTRY: ghcr.io
