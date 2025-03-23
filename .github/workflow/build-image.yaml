@@ -41,9 +41,13 @@ jobs:
         id: get-tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            # Use the provided tag or default to github.sha
+            TAG="${{ github.event.inputs.tag }}"
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
           else
-            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            # For push events, extract the tag from refs
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "TAG=$TAG" >> $GITHUB_OUTPUT
           fi
 
 #      - name: Extract metadata (tags, labels) for Docker
