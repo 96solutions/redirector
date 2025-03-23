@@ -16,7 +16,7 @@ COPY . .
 RUN go mod download
 RUN go mod verify
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /main .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /redirector .
 
 FROM scratch
 
@@ -25,8 +25,10 @@ COPY --from=base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=base /etc/passwd /etc/passwd
 COPY --from=base /etc/group /etc/group
 
-COPY --from=base /main .
+COPY --from=base /redirector .
 
 USER small-user:small-user
 
-CMD ["./main"]
+EXPOSE 8080
+
+CMD ["./redirector"]
